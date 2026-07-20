@@ -95,4 +95,3 @@ class ConfigManager:
             del profiles[name]
             return self.save_profiles(profiles)
         return False
-

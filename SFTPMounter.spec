@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['sftp_mounter/main.py'],
+    ['sftp_mounter\\main.py'],
     pathex=[],
     binaries=[],
-    datas=[('bin', 'bin')],
+    datas=[('sftp_mounter/bin', 'bin')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

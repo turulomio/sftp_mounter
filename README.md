@@ -57,4 +57,3 @@ Si estás en un sistema Linux, puedes compilar la aplicación utilizando Wine y 
    ```
 
 El ejecutable generado se guardará directamente en la raíz en `dist/SFTPMounter.exe`.
-

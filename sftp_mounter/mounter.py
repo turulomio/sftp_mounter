@@ -138,8 +138,6 @@ class Mounter:
 
         try:
             # Run msiexec in passive mode (shows progress bar, requests UAC silently)
-            # /passive: shows basic progress bar, non-interactive
-            # /norestart: prevents automatic computer restarts
             cmd = f'msiexec /i "{self.winfsp_msi}" /passive /norestart'
             logger.info(f"Running WinFsp installer: {cmd}")
             
@@ -160,14 +158,11 @@ class Mounter:
     def obscure_password(self, password: str) -> str:
         """Obscures the password using rclone's built-in obscure function."""
         if not os.path.exists(self.rclone_exe):
-            # Fallback if rclone is missing: just return plain password
-            # (Note: rclone mount won't work anyway, but prevents crash)
             return password
             
         try:
             # Run rclone obscure <password>
             args = [self.rclone_exe, 'obscure', password]
-            # Use subprocess with startupinfo to hide command prompt on Windows
             startupinfo = None
             if os.name == 'nt':
                 startupinfo = subprocess.STARTUPINFO()
@@ -177,14 +172,11 @@ class Mounter:
             return res.stdout.strip()
         except Exception as e:
             logger.error(f"Failed to obscure password: {e}")
-            # Fallback: rclone obscure output can be simulated if necessary,
-            # but since we have rclone, we should use it.
             return password
 
     def is_drive_letter_in_use(self, drive_letter: str) -> bool:
         """Checks if a Windows drive letter (e.g. 'X:') is already in use."""
         if os.name != 'nt':
-            # Mock or check folder existence on Linux
             return os.path.exists(drive_letter)
             
         drive_path = f"{drive_letter.upper()}"
@@ -195,7 +187,7 @@ class Mounter:
         if os.path.exists(drive_path + "\\"):
             return True
             
-        # 2. Run 'net use' or inspect drives to be sure (since some drives can be mapped but disconnected)
+        # 2. Run 'net use'
         try:
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -263,16 +255,13 @@ class Mounter:
                 env[f"RCLONE_CONFIG_{remote_name.upper()}_KEY_FILE_PASS"] = obscured_key_pass
 
         # Prepare Rclone command arguments
-        # Syntax: rclone mount remote:path mountpoint
-        # We append a leading '/' for absolute remote path, or keep it relative.
         remote_target = f"{remote_name}:{remote_path}"
         
-        # Rclone mount options
         args = [
             self.rclone_exe, "mount", remote_target, drive_letter,
             "--vfs-cache-mode", "writes",        # Crucial for file editing in Windows Explorer
             "--vfs-cache-max-age", "10s",
-            "--volname", f"SFTP {user}@{host}",   # Neat label in Windows Explorer
+            "--volname", f"SFTP {user}@{host}",   # Label in Windows Explorer
             "--network-mode",                    # Displays it as a network drive
         ]
 
@@ -294,11 +283,10 @@ class Mounter:
                 startupinfo=startupinfo
             )
             
-            # Wait briefly to see if it exits immediately (indicating a connection error)
+            # Wait briefly to see if it exits immediately
             time.sleep(2.0)
             
             if process.poll() is not None:
-                # Process has already terminated, read errors
                 _, stderr = process.communicate()
                 error_msg = stderr.strip() if stderr else "Error desconocido al conectar."
                 logger.error(f"Rclone mount process failed immediately: {error_msg}")
@@ -338,12 +326,11 @@ class Mounter:
                 if drive_letter in self.active_mounts:
                     del self.active_mounts[drive_letter]
 
-        # 2. Run system-level unmount commands to clean up lingering resources in Windows
+        # 2. Run system-level unmount commands
         if os.name == 'nt':
             try:
                 startupinfo = subprocess.STARTUPINFO()
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                # Force delete drive mapping using 'net use'
                 subprocess.run(['net', 'use', drive_letter, '/delete', '/y'], capture_output=True, startupinfo=startupinfo)
                 logger.info(f"Forced cleanup of drive {drive_letter} using net use.")
             except Exception as e:
@@ -351,7 +338,6 @@ class Mounter:
         else:
             try:
                 subprocess.run(['fusermount', '-u', drive_letter], capture_output=True)
-                # Cleanup directories created for mounting
                 if os.path.exists(drive_letter):
                     os.rmdir(drive_letter)
             except Exception as e:

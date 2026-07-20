@@ -401,14 +401,11 @@ class MainWindow(QWidget):
         """Populates drive letters selector with available Windows letters"""
         self.cmb_drive_letter.clear()
         if os.name == 'nt':
-            # Collect letters Z: down to D:
             for char in range(ord('Z'), ord('C'), -1):
                 letter = f"{chr(char)}:"
-                # Only add if not currently in use by the OS
                 if not self.mounter.is_drive_letter_in_use(letter):
                     self.cmb_drive_letter.addItem(letter)
         else:
-            # Fallback for Linux testing: provide mounting directories in user directory
             self.cmb_drive_letter.addItem(os.path.expanduser("~/mnt/sftp_drive"))
             self.cmb_drive_letter.addItem(os.path.expanduser("~/mnt/sftp_test"))
 
@@ -452,7 +449,6 @@ class MainWindow(QWidget):
                     auth_idx = 0
                 self.cmb_auth_type.setCurrentIndex(auth_idx)
                 
-                # Check auth type again to fill fields correctly
                 if auth_idx == 2:
                     self.txt_password.setText(profile.get('key_password', ''))
                 else:
@@ -507,7 +503,6 @@ class MainWindow(QWidget):
         """Gathers values from UI controls into a dictionary"""
         idx = self.cmb_auth_type.currentIndex()
         
-        # Default empty mappings
         auth_type = 'password'
         password = ''
         key_path = ''
@@ -541,7 +536,6 @@ class MainWindow(QWidget):
         """Saves current fields as a profile"""
         profile_name = self.cmb_profiles.currentText()
         if profile_name == "<Nuevo Perfil>" or not profile_name.strip():
-            # Prompt user for a profile name
             from PySide6.QtWidgets import QInputDialog
             name, ok = QInputDialog.getText(self, "Guardar Perfil", "Introduce el nombre del perfil:")
             if not ok or not name.strip():
@@ -556,7 +550,6 @@ class MainWindow(QWidget):
 
         if self.config_manager.save_profile(profile_name, data):
             QMessageBox.information(self, "Perfil Guardado", f"El perfil '{profile_name}' ha sido guardado.")
-            # Reload combobox and set index to the saved profile
             self.load_profiles_into_combo()
             idx = self.cmb_profiles.findText(profile_name)
             if idx >= 0:
@@ -618,7 +611,6 @@ class MainWindow(QWidget):
         self.lbl_status.setStyleSheet("color: #ffb86c;")
         self.app.processEvents()
 
-        # Execute mount command in separate thread or via process wait
         success, message = self.mounter.mount_sftp(data)
 
         self.is_connecting = False
@@ -629,7 +621,6 @@ class MainWindow(QWidget):
             self.btn_disconnect.setEnabled(True)
             self.btn_connect.setEnabled(False)
             
-            # Show bubble notification
             self.tray_icon.showMessage(
                 "SFTP Drive Mounter",
                 f"Servidor montado correctamente en {self.current_mounted_drive.upper()}",
@@ -667,10 +658,8 @@ class MainWindow(QWidget):
             self.lbl_status.setText("DESCONECTADO")
             self.lbl_status.setStyleSheet("color: #8b8b9c;")
             
-            # Update drives list to reclaim the free letter
             self.populate_drive_letters()
             
-            # Re-enable inputs
             self.set_ui_enabled(True)
             self.btn_connect.setEnabled(True)
             self.btn_disconnect.setEnabled(False)
@@ -699,7 +688,6 @@ class MainWindow(QWidget):
     def setup_system_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
         
-        # Use native system icon for mounter
         icon = self.style().standardIcon(QStyle.SP_DriveHDIcon)
         self.tray_icon.setIcon(icon)
         self.setWindowIcon(icon)
@@ -803,7 +791,6 @@ class MainWindow(QWidget):
             settings['start_with_windows'] = checked
             self.config_manager.save_settings(settings)
         else:
-            # Revert UI state if action failed
             self.chk_start_with_windows.setChecked(not checked)
             QMessageBox.critical(
                 self, "Error de Configuración", 
@@ -841,8 +828,6 @@ class MainWindow(QWidget):
             import winreg
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
             if enabled:
-                # If packaged with PyInstaller, sys.frozen is True and sys.executable points to the EXE.
-                # If running as standard script, we map Python path and main.py script path.
                 if getattr(sys, 'frozen', False):
                     exe_path = f'"{sys.executable}" --minimized'
                 else:
@@ -872,11 +857,8 @@ class MainWindow(QWidget):
         for name, profile in profiles.items():
             if profile.get('auto_mount', False):
                 logger.info(f"Auto-mounting profile: {name}")
-                # Set index in combobox to match the profile
                 idx = self.cmb_profiles.findText(name)
                 if idx >= 0:
                     self.cmb_profiles.setCurrentIndex(idx)
-                    # Trigger connection
                     self.on_connect_clicked()
                 break
-

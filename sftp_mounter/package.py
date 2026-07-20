@@ -13,7 +13,6 @@ RCLONE_LINUX_URL = "https://downloads.rclone.org/v1.66.0/rclone-v1.66.0-linux-am
 def download_file(url, target_path):
     print(f"Descargando {url} -> {target_path}...")
     try:
-        # User-Agent to avoid blocking
         req = urllib.request.Request(
             url, 
             headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -45,19 +44,15 @@ def setup_binaries():
     if not os.path.exists(rclone_path):
         print("Descargando Rclone...")
         zip_path = os.path.join(bin_dir, 'rclone_temp.zip')
-        
-        # Select URL based on OS (can package on Linux or Windows)
         rclone_url = RCLONE_WIN_URL if os.name == 'nt' else RCLONE_LINUX_URL
         
         if download_file(rclone_url, zip_path):
             try:
                 print("Extrayendo rclone...")
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                    # Find rclone.exe or rclone within the archive structure
                     for file_info in zip_ref.infolist():
                         filename = os.path.basename(file_info.filename)
                         if filename == rclone_exe_name:
-                            # Extract to bin/rclone[.exe]
                             with zip_ref.open(file_info.filename) as source, open(rclone_path, 'wb') as target:
                                 shutil.copyfileobj(source, target)
                             break
@@ -96,7 +91,7 @@ def run_packaging():
         "--onefile",
         "--noconsole",
         "--name", "SFTPMounter",
-        f"--add-data=bin{separator}bin",
+        f"--add-data=sftp_mounter/bin{separator}bin",
         "--distpath", "../dist",
         "--workpath", "../build",
         "--specpath", "..",
@@ -113,10 +108,7 @@ def run_packaging():
     except subprocess.CalledProcessError as e:
         print(f"Error durante el empaquetado: {e}")
 
-
 if __name__ == "__main__":
     print("Preparando dependencias para distribución todo-en-uno...")
     setup_binaries()
-    
-    # Pack if argument --pack is supplied, or by default
     run_packaging()
