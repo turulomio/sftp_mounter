@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "sftp-mounter"
+version = "1.0.0"
+description = "A simple Qt6 GUI tool to mount SFTP servers as network drives on Windows 11 using Rclone and WinFsp."
+authors = ["Antigravity <info@antigravity.ai>"]
+readme = "README.md"
+packages = [{include = "sftp_mounter"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+PySide6 = "^6.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pyinstaller = "^6.0.0"
+poethepoet = "^0.24.0"
+
+[tool.poetry.scripts]
+sftp-mounter = "sftp_mounter.main:main"
+
+[tool.poe.tasks]
+setup-wine-python = [
+    { cmd = "wget -q https://www.python.org/ftp/python/3.10.8/python-3.10.8-amd64.exe -O python-windows.exe" },
+    { cmd = "wine python-windows.exe /quiet InstallAllUsers=1 PrependPath=1" },
+    { cmd = "rm python-windows.exe" },
+    { cmd = "wine python -m pip install --upgrade pip" },
+    { cmd = "wine python -m pip install PySide6 pyinstaller" }
+]
+build-windows-wine = { cmd = "wine python sftp_mounter/package.py" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
