@@ -2,11 +2,16 @@ import sys
 import os
 import logging
 
-# Ensure local imports inside the package directory work correctly
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Ensure local imports and package imports work correctly
+package_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(package_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+if package_dir not in sys.path:
+    sys.path.insert(0, package_dir)
 
 from PySide6.QtWidgets import QApplication
-from gui import MainWindow
+from sftp_mounter.gui import MainWindow
 
 def setup_logging():
     """Sets up logging configuration."""

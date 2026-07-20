@@ -72,9 +72,9 @@ def setup_binaries():
 def run_packaging():
     print("Iniciando empaquetado con PyInstaller...")
     
-    # Change working directory to the directory containing this script
-    package_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(package_dir)
+    # Change working directory to the project root directory
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
 
     # Check if pyinstaller is installed
     try:
@@ -92,10 +92,10 @@ def run_packaging():
         "--noconsole",
         "--name", "SFTPMounter",
         f"--add-data=sftp_mounter/bin{separator}bin",
-        "--distpath", "../dist",
-        "--workpath", "../build",
-        "--specpath", "..",
-        "main.py"
+        "--distpath", "dist",
+        "--workpath", "build",
+        "--specpath", ".",
+        "sftp_mounter/main.py"
     ]
     
     print(f"Ejecutando: {' '.join(cmd)}")

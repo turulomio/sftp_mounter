@@ -9,8 +9,8 @@ from PySide6.QtWidgets import (
     QMenu, QMessageBox, QFrame, QStyle, QCheckBox
 )
 
-from config_manager import ConfigManager
-from mounter import Mounter
+from sftp_mounter.config_manager import ConfigManager
+from sftp_mounter.mounter import Mounter
 
 logger = logging.getLogger("SFTPMounter.GUI")
 
@@ -712,6 +712,11 @@ class MainWindow(QWidget):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
         self.tray_icon.show()
+
+    def show_normal(self):
+        self.showNormal()
+        self.activateWindow()
+        self.raise_()
 
     def on_tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.DoubleClick:
