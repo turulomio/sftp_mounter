@@ -1,3 +1,20 @@
+"""
+Controlador de montajes SFTP a través de rclone y FUSE (WinFsp/fusermount).
+
+Este módulo implementa la clase `Mounter`, que actúa como la capa lógica e integradora con
+herramientas de bajo nivel del sistema operativo. Su función principal consiste en:
+1. Extraer dinámicamente los binarios empaquetados (`rclone` y `winfsp.msi`).
+2. Comprobar la existencia del controlador WinFsp en Windows e instalarlo de forma silenciosa/pasiva si es necesario.
+3. Obfuscar las contraseñas para cumplir con los requerimientos de configuración de rclone en tiempo de ejecución.
+4. Lanzar y supervisar procesos secundarios (`rclone mount`) utilizando variables de entorno temporales para evitar escribir archivos de configuración físicos en el disco del usuario.
+5. Controlar de forma limpia el desmontaje y la finalización de los subprocesos.
+
+Para nuevos desarrolladores:
+- Esta clase interactúa de forma directa con el sistema de archivos y el sistema de procesos del sistema operativo.
+- Para evitar almacenar credenciales en archivos de texto, rclone se configura definiendo variables de entorno dinámicas estructuradas como `RCLONE_CONFIG_<NAME>_<KEY>` en lugar de usar un archivo `rclone.conf`.
+- La extracción de binarios maneja el ciclo de vida especial de PyInstaller, resolviendo rutas mediante `sys._MEIPASS`.
+"""
+
 import os
 import sys
 import subprocess
@@ -9,68 +26,96 @@ logger = logging.getLogger("SFTPMounter.Mounter")
 
 class Mounter:
     """
-    Handles checking dependencies (WinFsp), extracting bundled binaries,
-    installing WinFsp silently, and managing rclone mount processes.
+    Controla el ciclo de vida de los procesos de rclone, la detección e instalación
+    de WinFsp y la administración de unidades locales montadas.
     """
     def __init__(self):
-        # Configuration paths
+        """
+        Inicializa la estructura del mounter y extrae los recursos embebidos.
+        """
+        # Configurar rutas de directorios según la plataforma
         if os.name == 'nt':
             self.app_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'SFTPMounter')
         else:
             self.app_dir = os.path.join(os.path.expanduser('~'), '.config', 'sftpmounter')
 
+        # Directorio local donde se guardarán temporal/permanentemente los binarios rclone y winfsp.msi
         self.bin_dir = os.path.join(self.app_dir, 'bin')
         os.makedirs(self.bin_dir, exist_ok=True)
 
-        # Paths to binaries
+        # Rutas absolutas a los ejecutables que se utilizarán para el montaje
         self.rclone_exe = os.path.join(self.bin_dir, 'rclone.exe' if os.name == 'nt' else 'rclone')
         self.winfsp_msi = os.path.join(self.bin_dir, 'winfsp.msi')
 
-        # Keep track of active mounts: {drive_letter: subprocess.Popen}
+        # Registro en memoria de montajes actualmente activos: {drive_letter: subprocess.Popen}
+        # Permite llevar el control del proceso de rclone asociado a cada letra de unidad para poder terminarlo.
         self.active_mounts = {}
 
-        # Extract binaries on initialization
+        # Extraer los ejecutables embebidos desde el paquete distribuido en el arranque
         self.extract_binaries()
 
     def get_bundled_path(self, relative_path):
-        """Get absolute path to resource, works for dev and for PyInstaller"""
+        """
+        Resuelve la ruta absoluta de un recurso/archivo embebido.
+        
+        Soporta tanto la ejecución normal en entorno de desarrollo como el modo empaquetado de PyInstaller.
+        Cuando PyInstaller genera un ejecutable único, en tiempo de ejecución extrae todos sus
+        recursos en una carpeta temporal del sistema y expone dicha ruta en la variable `sys._MEIPASS`.
+        
+        Args:
+            relative_path (str): Ruta relativa del archivo dentro del paquete.
+            
+        Returns:
+            str | None: Ruta absoluta del archivo si existe, de lo contrario None.
+        """
         try:
-            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            # PyInstaller crea una carpeta temporal y define sys._MEIPASS
             base_path = sys._MEIPASS
+            # Si está empaquetado, los archivos se encuentran en sys._MEIPASS/bin
+            local_path = os.path.join(base_path, 'bin', relative_path)
+            if os.path.exists(local_path):
+                return local_path
         except AttributeError:
-            base_path = os.path.abspath(os.path.dirname(__file__))
-        
-        # Look in resources or bin directory
-        # Try local bin folder first
-        local_path = os.path.join(base_path, 'bin', relative_path)
-        if os.path.exists(local_path):
-            return local_path
-        
-        # Fallback to base path directly
-        fallback_path = os.path.join(base_path, relative_path)
-        if os.path.exists(fallback_path):
-            return fallback_path
+            # Modo desarrollo: buscar en la carpeta 'build/bin' en la raíz del proyecto
+            package_dir = os.path.abspath(os.path.dirname(__file__))
+            project_root = os.path.dirname(package_dir)
+            dev_path = os.path.join(project_root, 'build', 'bin', relative_path)
+            if os.path.exists(dev_path):
+                return dev_path
+            
+            # Caer en la carpeta 'bin' interna del paquete si se hubiera copiado ahí previamente
+            source_bin_path = os.path.join(package_dir, 'bin', relative_path)
+            if os.path.exists(source_bin_path):
+                return source_bin_path
             
         return None
 
     def extract_binaries(self):
-        """Extracts bundled rclone and WinFsp installer from resource folder to local app bin folder."""
-        # 1. Handle rclone
+        """
+        Copia los ejecutables rclone (y winfsp.msi en Windows) desde el bundle
+        del programa al directorio de ejecución local del usuario.
+        
+        Evita copiar si los archivos ya existen y tienen exactamente el mismo tamaño,
+        optimizando el tiempo de inicio de la aplicación.
+        Si rclone no viene embebido, intentará buscar uno disponible en el PATH del sistema.
+        """
+        # 1. Procesar rclone
         rclone_name = 'rclone.exe' if os.name == 'nt' else 'rclone'
         bundled_rclone = self.get_bundled_path(rclone_name)
         
         if bundled_rclone and os.path.exists(bundled_rclone):
             try:
-                # Copy only if it doesn't exist or size is different
+                # Copiar si no existe o si difiere en tamaño (ej. tras una actualización de versión)
                 if not os.path.exists(self.rclone_exe) or os.path.getsize(bundled_rclone) != os.path.getsize(self.rclone_exe):
                     shutil.copy2(bundled_rclone, self.rclone_exe)
+                    # En entornos Linux/macOS, otorgar permisos de lectura y ejecución (chmod +x / 0o755)
                     if os.name != 'nt':
                         os.chmod(self.rclone_exe, 0o755)
                     logger.info(f"Extracted rclone to {self.rclone_exe}")
             except Exception as e:
                 logger.error(f"Failed to copy rclone.exe: {e}")
         else:
-            # If not bundled, check if it's already in PATH (system-wide rclone)
+            # Si no está en los recursos embebidos, buscar en las rutas del sistema (PATH)
             system_rclone = shutil.which('rclone')
             if system_rclone:
                 self.rclone_exe = system_rclone
@@ -78,7 +123,7 @@ class Mounter:
             else:
                 logger.warning("rclone binary not found in bundle or system PATH.")
 
-        # 2. Handle WinFsp MSI (only on Windows)
+        # 2. Procesar instalador MSI de WinFsp (únicamente requerido en Windows)
         if os.name == 'nt':
             bundled_msi = self.get_bundled_path('winfsp.msi')
             if bundled_msi and os.path.exists(bundled_msi):
@@ -90,12 +135,21 @@ class Mounter:
                     logger.error(f"Failed to copy winfsp.msi: {e}")
 
     def is_winfsp_installed(self) -> bool:
-        """Checks if WinFsp is installed on the system."""
+        """
+        Determina si el controlador y API del sistema de archivos WinFsp están instalados en la máquina.
+        
+        Utiliza dos estrategias de verificación:
+        1. Comprobar la presencia física del cargador del servicio (`launcherd.exe`) en los directorios comunes de Program Files.
+        2. Consultar el registro de Windows buscando la clave de instalación y el directorio base registrado.
+        
+        Returns:
+            bool: True si está instalado o si no se ejecuta bajo Windows (FUSE nativo se asume en Linux), False de lo contrario.
+        """
         if os.name != 'nt':
-            # On non-Windows, we assume FUSE is installed or mock it
+            # En Linux / macOS confiamos en la presencia de FUSE del sistema
             return True
 
-        # Check typical install directories
+        # Estrategia 1: Directorios físicos estándar
         possible_paths = [
             r"C:\Program Files (x86)\WinFsp\bin\launcherd.exe",
             r"C:\Program Files\WinFsp\bin\launcherd.exe"
@@ -104,10 +158,9 @@ class Mounter:
             if os.path.exists(path):
                 return True
 
-        # Check Registry
+        # Estrategia 2: Inspección del Registro de Windows
         try:
             import winreg
-            # HKEY_LOCAL_MACHINE\SOFTWARE\WinFsp or HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\WinFsp
             keys = [
                 (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WinFsp"),
                 (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\WinFsp")
@@ -127,7 +180,17 @@ class Mounter:
         return False
 
     def install_winfsp(self) -> bool:
-        """Runs the WinFsp installer silently."""
+        """
+        Ejecuta el instalador WinFsp (.msi) de forma pasiva y automatizada.
+        
+        Parámetros msiexec utilizados:
+        - /i: Indica instalación.
+        - /passive: Modo pasivo, muestra únicamente la barra de progreso sin requerir interacciones.
+        - /norestart: Impide el reinicio automático del sistema durante/después de la instalación.
+        
+        Returns:
+            bool: True si la instalación fue exitosa (códigos de retorno 0 o 3010), False en caso contrario.
+        """
         if os.name != 'nt':
             logger.info("Not on Windows, skipping WinFsp installation.")
             return True
@@ -137,15 +200,15 @@ class Mounter:
             return False
 
         try:
-            # Run msiexec in passive mode (shows progress bar, requests UAC silently)
             cmd = f'msiexec /i "{self.winfsp_msi}" /passive /norestart'
             logger.info(f"Running WinFsp installer: {cmd}")
             
-            # Start process and wait
+            # Lanzar el proceso msiexec y esperar su finalización
             process = subprocess.Popen(cmd, shell=True)
             process.wait()
             
-            if process.returncode in (0, 3010): # 3010 is success but reboot required
+            # Códigos esperados: 0 (Éxito completo), 3010 (Éxito, pero se requiere reiniciar el sistema para aplicar cambios)
+            if process.returncode in (0, 3010):
                 logger.info("WinFsp installed successfully.")
                 return True
             else:
@@ -156,16 +219,29 @@ class Mounter:
             return False
 
     def obscure_password(self, password: str) -> str:
-        """Obscures the password using rclone's built-in obscure function."""
+        """
+        Ofusca una contraseña en texto plano utilizando el algoritmo propio de rclone.
+        
+        rclone no acepta contraseñas en texto claro dentro de sus variables de entorno o archivos
+        de configuración directos por razones de seguridad básica; requiere que estén ofuscadas
+        usando su comando interno `obscure`.
+        
+        Args:
+            password (str): Contraseña en texto claro.
+            
+        Returns:
+            str: Contraseña cifrada/ofuscada por rclone.
+        """
         if not os.path.exists(self.rclone_exe):
             return password
             
         try:
-            # Run rclone obscure <password>
+            # Ejecutar rclone obscure <password>
             args = [self.rclone_exe, 'obscure', password]
             startupinfo = None
             if os.name == 'nt':
                 startupinfo = subprocess.STARTUPINFO()
+                # Ocultar ventana de consola negra parpadeante en Windows
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 
             res = subprocess.run(args, capture_output=True, text=True, check=True, startupinfo=startupinfo)
@@ -175,7 +251,19 @@ class Mounter:
             return password
 
     def is_drive_letter_in_use(self, drive_letter: str) -> bool:
-        """Checks if a Windows drive letter (e.g. 'X:') is already in use."""
+        """
+        Valida si una letra de unidad en Windows (ej. 'Z:') o una ruta de montaje en Linux ya está ocupada.
+        
+        En Windows realiza una doble comprobación:
+        1. Evaluar si la ruta física del volumen ("Z:\\") existe.
+        2. Ejecutar la utilidad de red nativa 'net use' y buscar la letra en sus registros.
+        
+        Args:
+            drive_letter (str): Letra de volumen a verificar en Windows o ruta física en Unix.
+            
+        Returns:
+            bool: True si la ruta/letra está actualmente reservada u ocupada, False en caso contrario.
+        """
         if os.name != 'nt':
             return os.path.exists(drive_letter)
             
@@ -183,11 +271,11 @@ class Mounter:
         if not drive_path.endswith(':'):
             drive_path += ':'
             
-        # 1. Simple path existence check
+        # Comprobación básica de existencia
         if os.path.exists(drive_path + "\\"):
             return True
             
-        # 2. Run 'net use'
+        # Comprobación de unidades de red lógicas activas
         try:
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -201,8 +289,26 @@ class Mounter:
 
     def mount_sftp(self, profile: dict) -> (bool, str):
         """
-        Mounts the SFTP server as a network drive using rclone.
-        Returns (success, message).
+        Monta un servidor SFTP remoto como si fuese un volumen local.
+        
+        Utiliza el binario de rclone con el comando `mount`. Para evitar archivos de configuración,
+        pasa los parámetros de conexión dinámicamente mediante variables de entorno
+        generadas en tiempo de ejecución.
+        
+        Parámetros clave de montaje en rclone:
+        - --vfs-cache-mode writes: Modo de caché indispensable que permite al Explorador de archivos
+          realizar operaciones de edición en caliente, guardado directo de documentos de Office y
+          escrituras aleatorias secuenciales.
+        - --vfs-cache-max-age 10s: Expira rápidamente los archivos en caché para ahorrar espacio.
+        - --volname: Asigna una etiqueta de nombre amigable visible en 'Este Equipo'.
+        - --network-mode: Muestra la unidad montada en la sección 'Ubicaciones de Red',
+          mejorando el rendimiento de respuesta y la integración con la shell del sistema.
+          
+        Args:
+            profile (dict): Diccionario de perfiles que contiene el host, puerto, credenciales, etc.
+            
+        Returns:
+            tuple (bool, str): (Estado de éxito del montaje, Mensaje informativo o descripción de error).
         """
         host = profile.get('host')
         port = profile.get('port', '22')
@@ -211,7 +317,7 @@ class Mounter:
         drive_letter = profile.get('drive_letter', 'X:')
         auth_type = profile.get('auth_type', 'password')
         
-        # Standardize drive letter format (e.g., 'X:')
+        # Validar y normalizar formato de unidad de destino
         if os.name == 'nt':
             if not drive_letter.endswith(':'):
                 drive_letter += ':'
@@ -219,7 +325,7 @@ class Mounter:
             if self.is_drive_letter_in_use(drive_letter):
                 return False, f"La letra de unidad {drive_letter} ya está en uso."
         else:
-            # On Linux, drive_letter acts as a mounting directory path
+            # En sistemas UNIX, la letra actúa como directorio físico de montaje
             os.makedirs(drive_letter, exist_ok=True)
 
         if not os.path.exists(self.rclone_exe):
@@ -228,17 +334,17 @@ class Mounter:
         if not self.is_winfsp_installed():
             return False, "WinFsp no está instalado en el sistema."
 
-        # Define remote configuration name
+        # Identificador del remoto dinámico
         remote_name = "sftpmount"
 
-        # Prepare Environment variables for Rclone configuration
+        # Generar las variables de entorno de rclone al vuelo para evitar crear el archivo config en disco
         env = os.environ.copy()
         env[f"RCLONE_CONFIG_{remote_name.upper()}_TYPE"] = "sftp"
         env[f"RCLONE_CONFIG_{remote_name.upper()}_HOST"] = host
         env[f"RCLONE_CONFIG_{remote_name.upper()}_PORT"] = str(port)
         env[f"RCLONE_CONFIG_{remote_name.upper()}_USER"] = user
         
-        # Configure SSH authentication
+        # Procesar tipo de autenticación
         if auth_type == 'password':
             raw_password = profile.get('password', '')
             obscured = self.obscure_password(raw_password)
@@ -249,20 +355,21 @@ class Mounter:
                 return False, f"El archivo de clave privada no existe: {key_file}"
             env[f"RCLONE_CONFIG_{remote_name.upper()}_KEY_FILE"] = key_file
             
+            # Procesar frase de paso asociada a la clave privada si existe
             key_pass = profile.get('key_password', '')
             if key_pass:
                 obscured_key_pass = self.obscure_password(key_pass)
                 env[f"RCLONE_CONFIG_{remote_name.upper()}_KEY_FILE_PASS"] = obscured_key_pass
 
-        # Prepare Rclone command arguments
+        # Estructurar destino del comando: remoto:ruta_remota
         remote_target = f"{remote_name}:{remote_path}"
         
         args = [
             self.rclone_exe, "mount", remote_target, drive_letter,
-            "--vfs-cache-mode", "writes",        # Crucial for file editing in Windows Explorer
+            "--vfs-cache-mode", "writes",
             "--vfs-cache-max-age", "10s",
-            "--volname", f"SFTP {user}@{host}",   # Label in Windows Explorer
-            "--network-mode",                    # Displays it as a network drive
+            "--volname", f"SFTP {user}@{host}",
+            "--network-mode",
         ]
 
         logger.info(f"Launching rclone mount with command: {' '.join(args)}")
@@ -273,7 +380,7 @@ class Mounter:
                 startupinfo = subprocess.STARTUPINFO()
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 
-            # Run rclone in background
+            # Ejecutar rclone en segundo plano de manera asíncrona
             process = subprocess.Popen(
                 args,
                 env=env,
@@ -283,16 +390,18 @@ class Mounter:
                 startupinfo=startupinfo
             )
             
-            # Wait briefly to see if it exits immediately
+            # Espera breve de 2 segundos para monitorear si el proceso finaliza inmediatamente.
+            # Rclone suele caerse rápido ante errores de credenciales, puerto bloqueado u host inalcanzable.
             time.sleep(2.0)
             
             if process.poll() is not None:
+                # El proceso ha terminado con error; leemos la salida de error
                 _, stderr = process.communicate()
                 error_msg = stderr.strip() if stderr else "Error desconocido al conectar."
                 logger.error(f"Rclone mount process failed immediately: {error_msg}")
                 return False, f"Error al conectar: {error_msg}"
 
-            # Keep track of the running process
+            # Registrar el subproceso activo referenciado por su letra de unidad
             self.active_mounts[drive_letter] = process
             logger.info(f"Successfully started mount on {drive_letter}")
             return True, f"Unidad montada correctamente en {drive_letter}"
@@ -303,22 +412,33 @@ class Mounter:
 
     def unmount_sftp(self, drive_letter: str) -> bool:
         """
-        Unmounts a mapped drive letter and terminates the rclone process.
+        Desmonta de forma limpia una unidad SFTP previamente mapeada.
+        
+        1. Termina el proceso secundario rclone de forma amigable (terminate) y luego forzada (kill) si no responde.
+        2. Ejecuta comandos de limpieza a nivel del OS para limpiar la letra de unidad asignada.
+           - Windows: 'net use <letra> /delete /y'
+           - Linux: 'fusermount -u <ruta>'
+           
+        Args:
+            drive_letter (str): Letra de unidad (Z:) o ruta de montaje a limpiar.
+            
+        Returns:
+            bool: True si el desmontaje se completó con éxito y el recurso ya no está activo, False de lo contrario.
         """
         if os.name == 'nt' and not drive_letter.endswith(':'):
             drive_letter += ':'
 
         success = True
         
-        # 1. Kill the rclone process if we tracked it
+        # 1. Cerrar el proceso rclone correspondiente
         process = self.active_mounts.get(drive_letter)
         if process:
             try:
                 process.terminate()
-                process.wait(timeout=3.0)
+                process.wait(timeout=3.0)  # Esperar un tiempo razonable para que se apague
                 logger.info(f"Terminated rclone process for {drive_letter}")
             except subprocess.TimeoutExpired:
-                process.kill()
+                process.kill()  # Forzar cierre si no responde
                 logger.warning(f"Killed unresponsive rclone process for {drive_letter}")
             except Exception as e:
                 logger.error(f"Error terminating rclone process: {e}")
@@ -326,24 +446,26 @@ class Mounter:
                 if drive_letter in self.active_mounts:
                     del self.active_mounts[drive_letter]
 
-        # 2. Run system-level unmount commands
+        # 2. Ejecutar comandos de limpieza nativos
         if os.name == 'nt':
             try:
                 startupinfo = subprocess.STARTUPINFO()
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                # net use fuerza la desconexión a nivel de sistema por si queda algún rastro
                 subprocess.run(['net', 'use', drive_letter, '/delete', '/y'], capture_output=True, startupinfo=startupinfo)
                 logger.info(f"Forced cleanup of drive {drive_letter} using net use.")
             except Exception as e:
                 logger.error(f"Failed to run net use delete: {e}")
         else:
             try:
+                # Desmontar unidad FUSE en Linux
                 subprocess.run(['fusermount', '-u', drive_letter], capture_output=True)
                 if os.path.exists(drive_letter):
                     os.rmdir(drive_letter)
             except Exception as e:
                 logger.error(f"Failed to run fusermount: {e}")
 
-        # Check if drive is still active
+        # Comprobar el estado final del volumen
         if os.name == 'nt':
             is_active = self.is_drive_letter_in_use(drive_letter)
             if is_active:
@@ -353,3 +475,4 @@ class Mounter:
             success = not os.path.exists(drive_letter)
 
         return success
+

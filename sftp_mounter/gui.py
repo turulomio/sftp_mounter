@@ -1,3 +1,20 @@
+"""
+Interfaz gráfica de usuario (GUI) para SFTP Mounter basada en PySide6.
+
+Este módulo define la ventana principal de la aplicación (`MainWindow`), que implementa:
+1. Un formulario completo para perfiles SFTP (servidor, puerto, credenciales de contraseña y clave SSH).
+2. Un diseño visual premium en modo oscuro utilizando QSS (Qt Style Sheets).
+3. Mecanismos de interacción asíncrona mediante señales y slots de Qt.
+4. Integración con la bandeja del sistema (System Tray Icon) para minimizar y cerrar en segundo plano.
+5. Persistencia de ajustes globales como el inicio automático en Windows a través del registro.
+
+Para nuevos desarrolladores:
+- PySide6 funciona mediante un sistema de hilos y bucle de eventos. Las operaciones pesadas
+  se invocan a través de la clase `Mounter` que delega en subprocesos para no congelar la UI.
+- La estética se maneja mediante el string `QSS_STYLE`. Modifica este string si necesitas
+  personalizar fuentes, colores o márgenes.
+"""
+
 import os
 import sys
 import logging
@@ -163,25 +180,41 @@ QCheckBox::indicator:checked {
 """
 
 class MainWindow(QWidget):
+    """
+    Ventana principal de la aplicación. Administra los controles visuales,
+    la validación de los formularios de conexión y los eventos del sistema (bandeja, inicio, etc.).
+    """
     def __init__(self, app):
+        """
+        Inicializa la interfaz gráfica, enlaza los gestores de configuración y montaje,
+        y programa el auto-montaje inicial si corresponde.
+        
+        Args:
+            app (QApplication): Instancia de la aplicación Qt en ejecución.
+        """
         super().__init__()
         self.app = app
         self.config_manager = ConfigManager()
         self.mounter = Mounter()
         
-        # State variables
-        self.current_mounted_drive = None
-        self.is_connecting = False
+        # Variables de estado interno
+        self.current_mounted_drive = None  # Almacena la letra de unidad asignada (ej. 'Z:')
+        self.is_connecting = False         # Flag para bloquear re-intentos concurrentes de conexión
 
         self.init_ui()
         self.load_profiles_into_combo()
         self.check_winfsp_status()
         self.load_global_settings()
         
-        # Trigger auto-mount after UI displays
+        # Iniciar el auto-montaje con un breve retraso (500 ms) para permitir que la interfaz se dibuje
+        # completamente en la pantalla antes de iniciar procesos secundarios de red bloqueantes.
         QTimer.singleShot(500, self.perform_auto_mount)
 
     def init_ui(self):
+        """
+        Construye la jerarquía completa de widgets y layouts de la ventana.
+        Configura los marcos de perfil, credenciales, letras de unidad y botones de acción.
+        """
         self.setObjectName("mainWidget")
         self.setWindowTitle("SFTP Drive Mounter")
         self.setMinimumSize(480, 560)
@@ -384,7 +417,12 @@ class MainWindow(QWidget):
         self.setup_system_tray()
 
     def check_winfsp_status(self):
-        """Verifies if WinFsp driver is present and updates layout accordingly"""
+        """
+        Verifica el estado del controlador WinFsp en el sistema y actualiza los componentes visuales.
+        
+        Si no se detecta el controlador en Windows, deshabilita el botón de conexión y
+        muestra una tarjeta informativa con la opción de instalar el driver.
+        """
         installed = self.mounter.is_winfsp_installed()
         if installed:
             self.lbl_winfsp_warning.setText("WinFsp: OK")
@@ -398,7 +436,13 @@ class MainWindow(QWidget):
             self.btn_connect.setEnabled(False)
 
     def populate_drive_letters(self):
-        """Populates drive letters selector with available Windows letters"""
+        """
+        Llena el selector de unidades de red (ComboBox) con las letras libres de Windows.
+        
+        Escanea de forma descendente (de la Z: a la D:) omitiendo las letras de volumen
+        que ya se encuentren ocupadas por el sistema (ej. discos duros, lectores USB).
+        En sistemas UNIX, añade rutas de montaje por defecto dentro del directorio del usuario.
+        """
         self.cmb_drive_letter.clear()
         if os.name == 'nt':
             for char in range(ord('Z'), ord('C'), -1):
@@ -410,7 +454,10 @@ class MainWindow(QWidget):
             self.cmb_drive_letter.addItem(os.path.expanduser("~/mnt/sftp_test"))
 
     def load_profiles_into_combo(self):
-        """Loads saved connection profiles into the combobox"""
+        """
+        Consulta el gestor de configuración para recuperar los perfiles y cargarlos en la interfaz.
+        Siempre añade la opción '<Nuevo Perfil>' en el primer índice.
+        """
         self.cmb_profiles.clear()
         self.cmb_profiles.addItem("<Nuevo Perfil>")
         
@@ -419,7 +466,16 @@ class MainWindow(QWidget):
             self.cmb_profiles.addItem(name)
 
     def on_profile_selection_changed(self, index):
-        """Triggered when user selects a different profile"""
+        """
+        Slot gatillado cuando el usuario selecciona un perfil diferente de la lista.
+        
+        Si se selecciona '<Nuevo Perfil>', se limpian todos los campos del formulario.
+        En caso contrario, se leen los parámetros del perfil seleccionado y se rellenan
+        los inputs correspondientes de la interfaz.
+        
+        Args:
+            index (int): Índice seleccionado en el ComboBox de perfiles.
+        """
         if index <= 0:
             # Clear inputs for new profile
             self.txt_host.clear()
@@ -469,21 +525,30 @@ class MainWindow(QWidget):
                 self.btn_delete_profile.setEnabled(True)
 
     def on_auth_type_changed(self, index):
-        """Displays password, key path or passphrase fields depending on selected auth mode"""
-        if index == 0:  # Password only
+        """
+        Muestra u oculta controles dinámicamente según la opción de autenticación seleccionada.
+        
+        - Contraseña (index 0): Oculta los campos de ruta de llave privada.
+        - Llave privada (sin contraseña) (index 1): Oculta el campo de contraseña.
+        - Llave privada + Frase de paso (index 2): Muestra todos los campos (ruta llave y contraseña de frase de paso).
+        
+        Args:
+            index (int): Índice de la selección del ComboBox de autenticación.
+        """
+        if index == 0:  # Contraseña
             self.lbl_password.setText("Contraseña:")
             self.lbl_password.setVisible(True)
             self.txt_password.setVisible(True)
             self.lbl_key_path.setVisible(False)
             self.txt_key_path.setVisible(False)
             self.btn_browse_key.setVisible(False)
-        elif index == 1:  # Key only
+        elif index == 1:  # Llave sola
             self.lbl_password.setVisible(False)
             self.txt_password.setVisible(False)
             self.lbl_key_path.setVisible(True)
             self.txt_key_path.setVisible(True)
             self.btn_browse_key.setVisible(True)
-        elif index == 2:  # Key + Passphrase
+        elif index == 2:  # Llave + Frase de paso
             self.lbl_password.setText("Frase de paso:")
             self.lbl_password.setVisible(True)
             self.txt_password.setVisible(True)
@@ -492,7 +557,10 @@ class MainWindow(QWidget):
             self.btn_browse_key.setVisible(True)
 
     def on_browse_key_clicked(self):
-        """Opens a file dialog to select the private SSH key file"""
+        """
+        Abre un cuadro de diálogo del explorador de archivos nativo de Qt 
+        para que el usuario seleccione la ruta de su llave privada SSH.
+        """
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Seleccionar Llave Privada SSH", "", "All Files (*);;Key Files (*.pem *.key id_rsa)"
         )
@@ -500,7 +568,13 @@ class MainWindow(QWidget):
             self.txt_key_path.setText(file_path)
 
     def get_current_form_data(self):
-        """Gathers values from UI controls into a dictionary"""
+        """
+        Recopila todos los datos ingresados en el formulario de la UI
+        y los consolida en un diccionario estructurado de datos.
+        
+        Returns:
+            dict: Parámetros listos para su persistencia o procesamiento por el montador.
+        """
         idx = self.cmb_auth_type.currentIndex()
         
         auth_type = 'password'
@@ -533,7 +607,10 @@ class MainWindow(QWidget):
         }
 
     def on_save_profile_clicked(self):
-        """Saves current fields as a profile"""
+        """
+        Valida y almacena los datos actuales del formulario como un perfil guardado.
+        Si es un perfil nuevo, solicita un nombre descriptivo al usuario mediante un QInputDialog.
+        """
         profile_name = self.cmb_profiles.currentText()
         if profile_name == "<Nuevo Perfil>" or not profile_name.strip():
             from PySide6.QtWidgets import QInputDialog
@@ -544,6 +621,7 @@ class MainWindow(QWidget):
 
         data = self.get_current_form_data()
         
+        # Validaciones elementales
         if not data['host'] or not data['user']:
             QMessageBox.warning(self, "Error al guardar", "Los campos Servidor y Usuario son obligatorios.")
             return
@@ -558,7 +636,10 @@ class MainWindow(QWidget):
             QMessageBox.critical(self, "Error", "No se pudo guardar el perfil.")
 
     def on_delete_profile_clicked(self):
-        """Deletes the currently selected profile"""
+        """
+        Elimina de forma permanente el perfil de conexión que está seleccionado.
+        Requiere confirmación expresa del usuario mediante un QMessageBox.
+        """
         profile_name = self.cmb_profiles.currentText()
         if profile_name == "<Nuevo Perfil>":
             return
@@ -577,10 +658,14 @@ class MainWindow(QWidget):
                 QMessageBox.critical(self, "Error", "No se pudo eliminar el perfil.")
 
     def on_install_winfsp_clicked(self):
-        """Launches WinFsp installation in passive mode"""
+        """
+        Lanza el proceso de instalación pasiva de WinFsp.
+        Bloquea temporalmente el botón de instalación y actualiza los logs visuales.
+        """
         self.btn_install_winfsp.setEnabled(False)
         self.lbl_status.setText("INSTALANDO WINFSP...")
         self.lbl_status.setStyleSheet("color: #ffb86c;")
+        # Forzar a Qt a procesar eventos pendientes para actualizar visualmente la interfaz de inmediato
         self.app.processEvents()
         
         success = self.mounter.install_winfsp()
@@ -598,7 +683,11 @@ class MainWindow(QWidget):
             self.lbl_status.setStyleSheet("color: #ff5555;")
 
     def on_connect_clicked(self):
-        """Triggers the SFTP mount connection"""
+        """
+        Inicia de forma asíncrona la conexión SFTP y monta la unidad de red.
+        Bloquea los controles de formulario durante el intento para prevenir estados corruptos.
+        Muestra notificaciones nativas del sistema si se conecta exitosamente.
+        """
         data = self.get_current_form_data()
         
         if not data['host'] or not data['user']:
@@ -611,6 +700,7 @@ class MainWindow(QWidget):
         self.lbl_status.setStyleSheet("color: #ffb86c;")
         self.app.processEvents()
 
+        # Invocar la llamada lógica pesada
         success, message = self.mounter.mount_sftp(data)
 
         self.is_connecting = False
@@ -621,6 +711,7 @@ class MainWindow(QWidget):
             self.btn_disconnect.setEnabled(True)
             self.btn_connect.setEnabled(False)
             
+            # Notificación nativa en la bandeja de tareas
             self.tray_icon.showMessage(
                 "SFTP Drive Mounter",
                 f"Servidor montado correctamente en {self.current_mounted_drive.upper()}",
@@ -636,7 +727,9 @@ class MainWindow(QWidget):
             self.btn_connect.setEnabled(True)
 
     def on_disconnect_clicked(self):
-        """Triggers disconnection and unmounting"""
+        """
+        Desmonta la unidad remota activa y restaura el estado y los controles de la interfaz.
+        """
         if not self.current_mounted_drive:
             return
 
@@ -658,6 +751,7 @@ class MainWindow(QWidget):
             self.lbl_status.setText("DESCONECTADO")
             self.lbl_status.setStyleSheet("color: #8b8b9c;")
             
+            # Actualizar de nuevo la disponibilidad de las letras de unidad libres en el ComboBox
             self.populate_drive_letters()
             
             self.set_ui_enabled(True)
@@ -670,7 +764,13 @@ class MainWindow(QWidget):
             self.btn_disconnect.setEnabled(True)
 
     def set_ui_enabled(self, enabled):
-        """Locks/unlocks input controls during active connections"""
+        """
+        Habilita o deshabilita recursivamente los campos del formulario para impedir
+        que el usuario modifique las propiedades de la conexión activa mientras está montada.
+        
+        Args:
+            enabled (bool): True para desbloquear controles, False para bloquearlos.
+        """
         self.cmb_profiles.setEnabled(enabled)
         self.btn_delete_profile.setEnabled(enabled and self.cmb_profiles.currentIndex() > 0)
         self.txt_host.setEnabled(enabled)
@@ -684,15 +784,20 @@ class MainWindow(QWidget):
         self.cmb_drive_letter.setEnabled(enabled)
         self.btn_save_profile.setEnabled(enabled)
 
-    # ----------------- SYSTEM TRAY MANAGEMENT -----------------
+    # ----------------- SYSTEM TRAY MANAGEMENT (BANDEJA DE SISTEMA) -----------------
     def setup_system_tray(self):
+        """
+        Crea e inicializa el icono de la bandeja del sistema (System Tray Icon).
+        Asigna el menú contextual con opciones para mostrar la ventana, forzar el desmontaje o salir.
+        """
         self.tray_icon = QSystemTrayIcon(self)
         
+        # Usar un icono de unidad estándar de Qt para mejorar la integración visual
         icon = self.style().standardIcon(QStyle.SP_DriveHDIcon)
         self.tray_icon.setIcon(icon)
         self.setWindowIcon(icon)
 
-        # Context Menu
+        # Crear el menú contextual de la bandeja
         tray_menu = QMenu()
         
         action_show = QAction("Mostrar Ventana", self)
@@ -714,11 +819,18 @@ class MainWindow(QWidget):
         self.tray_icon.show()
 
     def show_normal(self):
+        """
+        Restaura la visibilidad normal de la ventana en pantalla y la enfoca en primer plano.
+        """
         self.showNormal()
         self.activateWindow()
         self.raise_()
 
     def on_tray_icon_activated(self, reason):
+        """
+        Slot gatillado ante la interacción con el icono de la bandeja del sistema.
+        Al hacer doble clic, alterna entre mostrar la ventana o esconderla en segundo plano.
+        """
         if reason == QSystemTrayIcon.DoubleClick:
             if self.isVisible():
                 self.hide()
@@ -727,16 +839,27 @@ class MainWindow(QWidget):
                 self.activateWindow()
 
     def force_unmount_all(self):
+        """
+        Forza la desconexión de la unidad SFTP mapeada activa.
+        """
         if self.current_mounted_drive:
             self.on_disconnect_clicked()
 
     def close_app(self):
+        """
+        Cierra limpiamente la aplicación.
+        Garantiza que cualquier unidad de red activa se desmonte antes de destruir el proceso de Qt.
+        """
         self.force_unmount_all()
         self.tray_icon.hide()
         self.app.quit()
 
     def changeEvent(self, event):
-        """Minimize to tray when window is minimized if minimize to tray option is active"""
+        """
+        Intercepta los eventos de cambio de estado de la ventana en PySide6.
+        Si la ventana se minimiza y el ajuste 'Minimizar al cerrar' está habilitado,
+        oculta la ventana de la barra de tareas y la esconde en el system tray.
+        """
         if event.type() == event.type().WindowStateChange:
             if self.isMinimized() and self.chk_minimize_to_tray.isChecked():
                 self.hide()
@@ -750,7 +873,11 @@ class MainWindow(QWidget):
         super().changeEvent(event)
 
     def closeEvent(self, event):
-        """Intercept close event to keep app running in background if mounted and option is active"""
+        """
+        Intercepta el evento de cierre de ventana (ej. al pulsar la cruz 'X' de Windows).
+        Si la unidad está montada y está habilitado el ajuste de tray, se cancela el cierre
+        del proceso y únicamente se esconde la UI, permitiendo que la unidad permanezca accesible.
+        """
         if self.chk_minimize_to_tray.isChecked() and self.current_mounted_drive:
             self.hide()
             event.ignore()
@@ -763,32 +890,41 @@ class MainWindow(QWidget):
         else:
             self.close_app()
 
-    # ----------------- GLOBAL SETTINGS & AUTOSTART MANAGEMENT -----------------
+    # ----------------- GLOBAL SETTINGS & AUTOSTART (REGISTRO DE WINDOWS) -----------------
     def load_global_settings(self):
-        """Loads and applies application global settings"""
+        """
+        Carga la configuración global desde el config_manager y la aplica a los controles de la UI.
+        Sincroniza el estado del checkbox de inicio automático con la clave correspondiente en el registro.
+        """
         settings = self.config_manager.load_settings()
         
-        # 1. Minimize to tray (default: True)
+        # 1. Minimizar a la bandeja (por defecto True)
         min_to_tray = settings.get('minimize_to_tray', True)
         self.chk_minimize_to_tray.setChecked(min_to_tray)
         
-        # 2. Start with Windows (check registry or settings)
+        # 2. Iniciar con Windows (leer directamente el registro de Windows para mayor fiabilidad)
         start_with_win = self.get_startup_registry()
         self.chk_start_with_windows.setChecked(start_with_win)
         
-        # Sync setting in config if they differ
+        # Sincronizar el archivo JSON si difiere del registro del SO
         if start_with_win != settings.get('start_with_windows'):
             settings['start_with_windows'] = start_with_win
             self.config_manager.save_settings(settings)
 
     def on_minimize_to_tray_changed(self):
-        """Triggered when minimize checkbox is toggled"""
+        """
+        Slot gatillado cuando se altera la casilla 'Minimizar al cerrar'.
+        Guarda la preferencia en los ajustes del JSON.
+        """
         settings = self.config_manager.load_settings()
         settings['minimize_to_tray'] = self.chk_minimize_to_tray.isChecked()
         self.config_manager.save_settings(settings)
 
     def on_start_with_windows_changed(self):
-        """Triggered when run on startup checkbox is toggled"""
+        """
+        Slot gatillado cuando se activa/desactiva la casilla 'Iniciar con Windows'.
+        Modifica el registro del sistema operativo y guarda la configuración.
+        """
         checked = self.chk_start_with_windows.isChecked()
         success = self.set_startup_registry(checked)
         if success:
@@ -796,6 +932,7 @@ class MainWindow(QWidget):
             settings['start_with_windows'] = checked
             self.config_manager.save_settings(settings)
         else:
+            # Revertir estado del check en caso de fallo
             self.chk_start_with_windows.setChecked(not checked)
             QMessageBox.critical(
                 self, "Error de Configuración", 
@@ -803,7 +940,13 @@ class MainWindow(QWidget):
             )
 
     def get_startup_registry(self) -> bool:
-        """Checks if startup entry exists in Windows registry"""
+        """
+        Comprueba si la entrada de inicio automático de SFTPMounter existe en el Registro de Windows.
+        Ruta del registro analizada: HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run
+        
+        Returns:
+            bool: True si la entrada existe, False en caso contrario o si no está en Windows.
+        """
         if os.name != 'nt':
             return False
             
@@ -823,7 +966,19 @@ class MainWindow(QWidget):
             return False
 
     def set_startup_registry(self, enabled: bool) -> bool:
-        """Enables/disables application auto-start via Windows Registry"""
+        """
+        Agrega o remueve la clave del registro de Windows para controlar el inicio automático.
+        
+        Si el programa se ejecuta compilado (frozen), apunta directamente al ejecutable,
+        de lo contrario apunta al intérprete de python pasando el script main como argumento.
+        En ambos casos se anexa el argumento '--minimized' para iniciar en segundo plano.
+        
+        Args:
+            enabled (bool): True para registrar inicio automático, False para removerlo.
+            
+        Returns:
+            bool: True si el registro fue exitoso o no aplica, False en caso de error de permisos.
+        """
         if os.name != 'nt':
             logger.info("Not on Windows, skipping registry startup key modification.")
             return True
@@ -833,6 +988,7 @@ class MainWindow(QWidget):
             import winreg
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
             if enabled:
+                # Comprobar si se ejecuta desde el empaquetado de PyInstaller (sys.frozen)
                 if getattr(sys, 'frozen', False):
                     exe_path = f'"{sys.executable}" --minimized'
                 else:
@@ -853,7 +1009,10 @@ class MainWindow(QWidget):
             return False
 
     def perform_auto_mount(self):
-        """Scans saved profiles and auto-connects the first profile designated for auto-mount"""
+        """
+        Escanea la colección de perfiles almacenados e inicia el montaje del primer perfil
+        que tenga marcada la casilla de 'Autoconectar' (auto_mount = True).
+        """
         if not self.mounter.is_winfsp_installed():
             logger.warning("Auto-mount aborted because WinFsp is not installed.")
             return

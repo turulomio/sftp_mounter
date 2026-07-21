@@ -5,7 +5,7 @@ a = Analysis(
     ['sftp_mounter\\main.py'],
     pathex=[],
     binaries=[],
-    datas=[('sftp_mounter/bin', 'bin')],
+    datas=[('build/bin', 'bin')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
