@@ -214,7 +214,6 @@ def run_packaging():
         "--onefile",
         "--noconsole",
         "--name", exe_name,
-        "--icon=sftp_mounter/logo.ico",
         f"--add-data=build/bin{separator}bin",
         "--distpath", "dist",
         "--workpath", "build",

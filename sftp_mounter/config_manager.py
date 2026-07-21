@@ -37,26 +37,33 @@ Para nuevos desarrolladores:
 import os
 import json
 import logging
-from configparser_rb import string_to_rotatedbase64, rotatedbase64_to_string
+import base64
 
 logger = logging.getLogger("SFTPMounter.ConfigManager")
 
-def _encode_pass(val):
+_OFS_KEY = 0x5A  # Máscara XOR simple para ofuscar texto plano
+
+def _encode_pass(val: str) -> str:
     if not val:
         return ""
     try:
-        return string_to_rotatedbase64(val)
+        # Aplicar transformación XOR simple + Base64 nativo
+        obfuscated_bytes = bytes([b ^ _OFS_KEY for b in val.encode('utf-8')])
+        return base64.b64encode(obfuscated_bytes).decode('utf-8')
     except Exception as e:
         logger.error(f"Error obfuscating password: {e}")
         return val
 
-def _decode_pass(val):
+def _decode_pass(val: str) -> str:
     if not val:
         return ""
     try:
-        return rotatedbase64_to_string(val)
+        # Decodificar Base64 + revertir máscara XOR
+        decoded_bytes = base64.b64decode(val.encode('utf-8'))
+        deobfuscated_bytes = bytes([b ^ _OFS_KEY for b in decoded_bytes])
+        return deobfuscated_bytes.decode('utf-8')
     except Exception:
-        # Fallback si era contraseña antigua en plano
+        # Fallback por retrocompatibilidad si la contraseña estaba en texto plano o formato previo
         return val
 
 class ConfigManager:
