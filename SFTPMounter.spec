@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['sftp_mounter\\main.py'],
+    ['sftp_mounter/main.py'],
     pathex=[],
     binaries=[],
     datas=[('build/bin', 'bin')],

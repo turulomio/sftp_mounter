@@ -476,3 +476,67 @@ class Mounter:
 
         return success
 
+    def get_rclone_version(self) -> str:
+        """
+        Ejecuta el comando version de rclone para detectar la versión actual instalada.
+        
+        Returns:
+            str: Versión detectada (ej. "v1.66.0") o mensaje de no detectado.
+        """
+        if not os.path.exists(self.rclone_exe):
+            return "No detectado"
+            
+        try:
+            startupinfo = None
+            if os.name == 'nt':
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                
+            res = subprocess.run([self.rclone_exe, 'version'], capture_output=True, text=True, startupinfo=startupinfo)
+            lines = res.stdout.splitlines()
+            if lines:
+                # La primera línea suele ser algo como "rclone v1.66.0"
+                parts = lines[0].split()
+                if len(parts) >= 2:
+                    return parts[1]
+                return lines[0]
+        except Exception as e:
+            logger.error(f"Error querying rclone version: {e}")
+            
+        return "Desconocido"
+
+    def get_winfsp_version(self) -> str:
+        """
+        Detecta la versión de WinFsp instalada consultando el Registro de Windows.
+        
+        Returns:
+            str: Versión de WinFsp detectada (ej. "2.0.23075"), o "No instalado".
+        """
+        if os.name != 'nt':
+            return "N/A"
+            
+        if not self.is_winfsp_installed():
+            return "No instalado"
+            
+        keys = [
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinFsp"),
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\WinFsp")
+        ]
+        
+        try:
+            import winreg
+            for root, key_path in keys:
+                try:
+                    key = winreg.OpenKey(root, key_path, 0, winreg.KEY_READ)
+                    val, _ = winreg.QueryValueEx(key, "DisplayVersion")
+                    winreg.CloseKey(key)
+                    if val:
+                        return str(val)
+                except OSError:
+                    continue
+        except Exception as e:
+            logger.error(f"Error querying WinFsp version: {e}")
+            
+        return "Detectado (Versión desconocida)"
+
+
