@@ -50,6 +50,24 @@ TRANSLATIONS = {
         'hi': 'SFTP Mounter', 'zh': 'SFTP Mounter', 'ru': 'SFTP Mounter',
         'ro': 'SFTP Mounter'
     },
+    'menu_options': {
+        'es': 'Opciones', 'en': 'Options', 'fr': 'Options',
+        'pt': 'Opções', 'de': 'Optionen', 'it': 'Opzioni',
+        'hi': 'विकल्प', 'zh': '选项', 'ru': 'Опции',
+        'ro': 'Opțiuni'
+    },
+    'menu_help': {
+        'es': 'Ayuda', 'en': 'Help', 'fr': 'Aide',
+        'pt': 'Ajuda', 'de': 'Hilfe', 'it': 'Aiuto',
+        'hi': 'सहायता', 'zh': '帮助', 'ru': 'Помощь',
+        'ro': 'Ajutor'
+    },
+    'menu_language': {
+        'es': 'Idioma', 'en': 'Language', 'fr': 'Langue',
+        'pt': 'Idioma', 'de': 'Sprache', 'it': 'Lingua',
+        'hi': 'भाषा', 'zh': '语言', 'ru': 'Язык',
+        'ro': 'Limbă'
+    },
     'winfsp_ok': {
         'es': 'WinFsp: OK', 'en': 'WinFsp: OK', 'fr': 'WinFsp: OK',
         'pt': 'WinFsp: OK', 'de': 'WinFsp: OK', 'it': 'WinFsp: OK',
