@@ -242,13 +242,6 @@ class MainWindow(QWidget):
         self.lbl_winfsp_warning.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         title_layout.addWidget(self.lbl_winfsp_warning)
         
-        # Botón Acerca de / Versiones
-        self.btn_about = QPushButton("ℹ")
-        self.btn_about.setObjectName("btnSecondary")
-        self.btn_about.setFixedSize(30, 30)
-        self.btn_about.clicked.connect(self.on_about_clicked)
-        title_layout.addWidget(self.btn_about)
-        
         main_layout.addLayout(title_layout)
 
         # ----------------- SECTION: PROFILE SELECTOR -----------------
@@ -377,7 +370,7 @@ class MainWindow(QWidget):
         checks_layout.addWidget(self.chk_auto_mount)
         options_layout.addLayout(checks_layout)
         
-        # Language selector row
+        # Language selector and About button row
         lang_layout = QHBoxLayout()
         self.lbl_lang = QLabel()
         lang_layout.addWidget(self.lbl_lang)
@@ -387,6 +380,12 @@ class MainWindow(QWidget):
             self.cmb_lang.addItem(lang_name, lang_code)
         self.cmb_lang.currentIndexChanged.connect(self.on_language_changed)
         lang_layout.addWidget(self.cmb_lang, 1)
+        
+        self.btn_about = QPushButton()
+        self.btn_about.setObjectName("btnSecondary")
+        self.btn_about.clicked.connect(self.on_about_clicked)
+        lang_layout.addWidget(self.btn_about)
+        
         options_layout.addLayout(lang_layout)
         
         main_layout.addWidget(options_frame)
@@ -481,7 +480,7 @@ class MainWindow(QWidget):
         self.lbl_lang.setText(self.i18n.t('lang_selector'))
         self.btn_connect.setText(self.i18n.t('connect'))
         self.btn_disconnect.setText(self.i18n.t('disconnect'))
-        self.btn_about.setToolTip(self.i18n.t('about'))
+        self.btn_about.setText(self.i18n.t('about'))
         
         # Combo boxes items
         self.cmb_auth_type.setItemText(0, self.i18n.t('auth_password'))
@@ -1084,7 +1083,7 @@ class MainWindow(QWidget):
             f"• {self.i18n.t('author')}<br>"
             f"• {self.i18n.t('license')}<br>"
             f"• {self.i18n.t('project_url', url=github_link)}<br><br>"
-            "<i>Antigravity &copy; 2026</i>"
+            "<i>Turulomio &copy; 2026</i>"
         )
         
         QMessageBox.about(self, self.i18n.t('about'), msg)

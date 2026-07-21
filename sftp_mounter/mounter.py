@@ -138,9 +138,12 @@ class Mounter:
         """
         Determina si el controlador y API del sistema de archivos WinFsp están instalados en la máquina.
         
-        Utiliza dos estrategias de verificación:
+        Utiliza varias estrategias independientes de verificación:
         1. Comprobar la presencia física del cargador del servicio (`launcherd.exe`) en los directorios comunes de Program Files.
         2. Consultar el registro de Windows buscando la clave de instalación y el directorio base registrado.
+        3. Comprobar si el servicio del kernel 'WinFsp' está registrado en el sistema.
+        4. Verificar la presencia física del driver del kernel `winfsp.sys`.
+        5. Comprobar la clave de desinstalación de WinFsp.
         
         Returns:
             bool: True si está instalado o si no se ejecuta bajo Windows (FUSE nativo se asume en Linux), False de lo contrario.
@@ -158,7 +161,7 @@ class Mounter:
             if os.path.exists(path):
                 return True
 
-        # Estrategia 2: Inspección del Registro de Windows
+        # Estrategia 2: Inspección del Registro de Windows (InstallDir)
         try:
             import winreg
             keys = [
@@ -175,9 +178,48 @@ class Mounter:
                 except OSError:
                     continue
         except Exception as e:
-            logger.error(f"Registry check failed: {e}")
+            logger.error(f"Registry check (InstallDir) failed: {e}")
+
+        # Estrategia 3: Comprobar el servicio de kernel registrado (Services\\WinFsp)
+        try:
+            import winreg
+            try:
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Services\WinFsp", 0, winreg.KEY_READ)
+                winreg.CloseKey(key)
+                return True
+            except OSError:
+                pass
+        except Exception as e:
+            logger.error(f"Registry check (Services) failed: {e}")
+
+        # Estrategia 4: Presencia física de la extensión del controlador (winfsp.sys)
+        try:
+            sys_root = os.environ.get('SystemRoot', 'C:\\Windows')
+            winfsp_sys_path = os.path.join(sys_root, 'System32', 'drivers', 'winfsp.sys')
+            if os.path.exists(winfsp_sys_path):
+                return True
+        except Exception as e:
+            logger.error(f"Physical winfsp.sys file check failed: {e}")
+
+        # Estrategia 5: Comprobar claves de desinstalación de Windows
+        try:
+            import winreg
+            uninstall_keys = [
+                (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinFsp"),
+                (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\WinFsp")
+            ]
+            for root, key_path in uninstall_keys:
+                try:
+                    key = winreg.OpenKey(root, key_path, 0, winreg.KEY_READ)
+                    winreg.CloseKey(key)
+                    return True
+                except OSError:
+                    continue
+        except Exception as e:
+            logger.error(f"Registry check (Uninstall) failed: {e}")
 
         return False
+
 
     def install_winfsp(self) -> bool:
         """
