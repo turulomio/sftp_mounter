@@ -146,6 +146,13 @@ def setup_binaries():
     if os.name != 'nt' and os.path.exists(rclone_path):
         os.chmod(rclone_path, 0o755)
 
+    # Copiar el logotipo SVG del proyecto a la carpeta build/bin
+    logo_src = os.path.join(project_root, 'logo.svg')
+    logo_dest = os.path.join(bin_dir, 'logo.svg')
+    if os.path.exists(logo_src):
+        shutil.copy2(logo_src, logo_dest)
+        print("Logotipo SVG copiado a build/bin.")
+
 def get_project_version() -> str:
     """
     Recupera de forma dinámica la versión del proyecto definida en el archivo pyproject.toml.

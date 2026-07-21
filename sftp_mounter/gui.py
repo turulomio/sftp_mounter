@@ -246,7 +246,6 @@ class MainWindow(QWidget):
         self.i18n = I18N(default_lang=saved_lang if saved_lang else 'es')
         
         # Variables de estado interno
-        self.current_mounted_drive = None  # Almacena la letra de unidad asignada (ej. 'Z:')
         self.is_connecting = False         # Flag para bloquear re-intentos de conexión
 
         self.init_ui()
@@ -434,6 +433,7 @@ class MainWindow(QWidget):
         mount_layout.addWidget(self.lbl_local_drive)
         self.cmb_drive_letter = QComboBox()
         self.populate_drive_letters()
+        self.cmb_drive_letter.currentIndexChanged.connect(self.update_status_label)
         mount_layout.addWidget(self.cmb_drive_letter, 1)
         
         self.chk_auto_mount = QCheckBox()
@@ -568,16 +568,29 @@ class MainWindow(QWidget):
         if hasattr(self, 'tray_icon'):
             self.setup_system_tray()
 
+    def get_selected_drive_letter(self):
+        """
+        Devuelve la letra de unidad (con dos puntos) o ruta seleccionada en el combo box.
+        """
+        drive = self.cmb_drive_letter.currentText().strip()
+        if drive and os.name == 'nt' and not drive.endswith(':'):
+            drive += ':'
+        return drive
+
     def update_status_label(self):
         """
         Actualiza el texto del label de estado (lbl_status) según la conexión activa
         y aplica estilos de color correspondientes.
         """
-        if self.current_mounted_drive:
-            self.lbl_status.setText(self.i18n.t('status_mounted', drive=self.current_mounted_drive.upper()))
+        drive = self.get_selected_drive_letter()
+        is_mounted = drive in self.mounter.active_mounts
+        
+        if is_mounted:
+            self.lbl_status.setText(self.i18n.t('status_mounted', drive=drive.upper()))
             self.lbl_status.setStyleSheet("color: #50fa7b;")
             self.btn_disconnect.setEnabled(True)
             self.btn_connect.setEnabled(False)
+            self.set_ui_enabled(False)
         elif self.is_connecting:
             self.lbl_status.setText(self.i18n.t('status_connecting'))
             self.lbl_status.setStyleSheet("color: #ffb86c;")
@@ -587,28 +600,22 @@ class MainWindow(QWidget):
             self.lbl_status.setText(self.i18n.t('status_disconnected'))
             self.lbl_status.setStyleSheet("color: #8b8b9c;")
             self.btn_disconnect.setEnabled(False)
-            self.btn_connect.setEnabled(True) # Permitir siempre conectar (no-bloqueante)
+            self.btn_connect.setEnabled(True)
+            self.set_ui_enabled(True)
 
     def check_winfsp_status(self):
         """
         Verifica el estado del controlador WinFsp en el sistema y actualiza los componentes visuales.
-        
-        Si no se detecta el controlador en Windows, muestra una tarjeta informativa
-        con la opción de instalar el driver, pero mantiene habilitada la opción de conectar.
         """
         installed = self.mounter.is_winfsp_installed()
         if installed:
             self.lbl_winfsp_warning.setText(self.i18n.t('winfsp_ok'))
             self.lbl_winfsp_warning.setStyleSheet("color: #50fa7b; font-size: 11px;")
             self.winfsp_card.setVisible(False)
-            if not self.is_connecting and not self.current_mounted_drive:
-                self.btn_connect.setEnabled(True)
         else:
             self.lbl_winfsp_warning.setText(self.i18n.t('winfsp_not_installed'))
             self.lbl_winfsp_warning.setStyleSheet("color: #ff5555; font-size: 11px;")
             self.winfsp_card.setVisible(True)
-            if not self.is_connecting and not self.current_mounted_drive:
-                self.btn_connect.setEnabled(True) # Mantener habilitado (no-bloqueante)
 
     def populate_drive_letters(self):
         """
@@ -699,6 +706,8 @@ class MainWindow(QWidget):
                     self.cmb_drive_letter.setCurrentIndex(self.cmb_drive_letter.count() - 1)
                 
                 self.btn_delete_profile.setEnabled(True)
+        
+        self.update_status_label()
 
     def on_auth_type_changed(self, index):
         """
@@ -879,12 +888,12 @@ class MainWindow(QWidget):
 
         self.is_connecting = False
         if success:
-            self.current_mounted_drive = data['drive_letter']
             self.update_status_label()
+            self.setup_system_tray()
             
             self.tray_icon.showMessage(
                 "SFTP Drive Mounter",
-                self.i18n.t('connection_ok_msg', drive=self.current_mounted_drive.upper()),
+                self.i18n.t('connection_ok_msg', drive=data['drive_letter'].upper()),
                 QSystemTrayIcon.Information,
                 3000
             )
@@ -895,17 +904,14 @@ class MainWindow(QWidget):
                 display_msg = self.i18n.t('net_use_in_use', drive=data['drive_letter'].upper())
                 
             QMessageBox.critical(self, self.i18n.t('connection_fail_title'), display_msg)
-            self.lbl_status.setText(self.i18n.t('status_error'))
-            self.lbl_status.setStyleSheet("color: #ff5555;")
-            self.set_ui_enabled(True)
-            self.btn_disconnect.setEnabled(False)
-            self.btn_connect.setEnabled(True)
+            self.update_status_label()
 
     def on_disconnect_clicked(self):
         """
         Desmonta la unidad remota activa y restaura el estado.
         """
-        if not self.current_mounted_drive:
+        drive = self.get_selected_drive_letter()
+        if not drive or drive not in self.mounter.active_mounts:
             return
 
         self.lbl_status.setText(self.i18n.t('status_unmounting'))
@@ -913,24 +919,21 @@ class MainWindow(QWidget):
         self.btn_disconnect.setEnabled(False)
         self.app.processEvents()
 
-        success = self.mounter.unmount_sftp(self.current_mounted_drive)
+        success = self.mounter.unmount_sftp(drive)
 
         if success:
             self.tray_icon.showMessage(
                 "SFTP Drive Mounter",
-                self.i18n.t('disconnection_ok_msg', drive=self.current_mounted_drive.upper()),
+                self.i18n.t('disconnection_ok_msg', drive=drive.upper()),
                 QSystemTrayIcon.Information,
                 2000
             )
-            self.current_mounted_drive = None
             self.update_status_label()
             self.populate_drive_letters()
-            self.set_ui_enabled(True)
+            self.setup_system_tray()
         else:
             QMessageBox.warning(self, self.i18n.t('unmount_warning_title'), self.i18n.t('unmount_warning_msg'))
-            self.lbl_status.setText(self.i18n.t('status_unmount_error'))
-            self.lbl_status.setStyleSheet("color: #ff5555;")
-            self.btn_disconnect.setEnabled(True)
+            self.update_status_label()
 
     def set_ui_enabled(self, enabled):
         """
@@ -987,6 +990,19 @@ class MainWindow(QWidget):
         action_show.triggered.connect(self.show_normal)
         tray_menu.addAction(action_show)
         
+        # Mostrar listado de unidades montadas activas
+        active_drives = list(self.mounter.active_mounts.keys())
+        if active_drives:
+            tray_menu.addSeparator()
+            header_action = QAction(self.i18n.t('mounted_drives') + ":", self)
+            header_action.setEnabled(False)
+            tray_menu.addAction(header_action)
+            
+            for drive in sorted(active_drives):
+                drive_action = QAction(f"  • {drive.upper()}", self)
+                drive_action.triggered.connect(lambda checked=False, d=drive: self.open_drive_folder(d))
+                tray_menu.addAction(drive_action)
+
         action_unmount = QAction(self.i18n.t('unmount_all'), self)
         action_unmount.triggered.connect(self.force_unmount_all)
         tray_menu.addAction(action_unmount)
@@ -999,6 +1015,19 @@ class MainWindow(QWidget):
 
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
+
+    def open_drive_folder(self, drive):
+        """
+        Abre el explorador de archivos en la ruta del montaje seleccionado.
+        """
+        import os
+        import subprocess
+        
+        path = os.path.abspath(os.path.expanduser(drive))
+        if os.name == 'nt':
+            os.startfile(path)
+        else:
+            subprocess.Popen(['xdg-open', path])
 
     def show_normal(self):
         """
@@ -1021,10 +1050,13 @@ class MainWindow(QWidget):
 
     def force_unmount_all(self):
         """
-        Forza la desconexión de la unidad SFTP mapeada activa.
+        Forza la desconexión de todas las unidades SFTP activas.
         """
-        if self.current_mounted_drive:
-            self.on_disconnect_clicked()
+        drives = list(self.mounter.active_mounts.keys())
+        for drive in drives:
+            self.mounter.unmount_sftp(drive)
+        self.update_status_label()
+        self.populate_drive_letters()
 
     def close_app(self):
         """
@@ -1054,7 +1086,7 @@ class MainWindow(QWidget):
         """
         Intercepta el evento de cierre de ventana.
         """
-        if self.act_minimize_to_tray.isChecked() and self.current_mounted_drive:
+        if self.act_minimize_to_tray.isChecked() and len(self.mounter.active_mounts) > 0:
             self.hide()
             event.ignore()
             self.tray_icon.showMessage(
@@ -1221,19 +1253,37 @@ class MainWindow(QWidget):
 
     def perform_auto_mount(self):
         """
-        Escanea la colección de perfiles almacenados e inicia el montaje del primer perfil
-        que tenga marcada la casilla de 'Autoconectar' (auto_mount = True).
+        Escanea la colección de perfiles almacenados e inicia el montaje de todos los perfiles
+        que tengan marcada la casilla de 'Autoconectar' (auto_mount = True) de forma secuencial.
         """
         if not self.mounter.is_winfsp_installed():
             logger.warning("Auto-mount aborted because WinFsp is not installed.")
             return
             
         profiles = self.config_manager.load_profiles()
-        for name, profile in profiles.items():
-            if profile.get('auto_mount', False):
-                logger.info(f"Auto-mounting profile: {name}")
+        self.auto_mount_queue = [p for p in profiles.values() if p.get('auto_mount', False)]
+        self.process_auto_mount_queue()
+
+    def process_auto_mount_queue(self):
+        """
+        Procesa de forma secuencial y no bloqueante la cola de perfiles a auto-conectar.
+        """
+        if not hasattr(self, 'auto_mount_queue') or not self.auto_mount_queue:
+            return
+            
+        profile = self.auto_mount_queue.pop(0)
+        logger.info(f"Auto-mounting profile: {profile.get('host')}")
+        
+        # Buscar el perfil correspondiente por host y drive_letter
+        profiles = self.config_manager.load_profiles()
+        for name, p in profiles.items():
+            if p.get('host') == profile.get('host') and p.get('drive_letter') == profile.get('drive_letter'):
                 idx = self.cmb_profiles.findText(name)
                 if idx >= 0:
                     self.cmb_profiles.setCurrentIndex(idx)
-                    self.on_connect_clicked()
-                break
+                    break
+        
+        self.on_connect_clicked()
+        
+        if self.auto_mount_queue:
+            QTimer.singleShot(500, self.process_auto_mount_queue)

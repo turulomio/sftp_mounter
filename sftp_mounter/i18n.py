@@ -68,6 +68,12 @@ TRANSLATIONS = {
         'hi': 'भाषा', 'zh': '语言', 'ru': 'Язык',
         'ro': 'Limbă'
     },
+    'mounted_drives': {
+        'es': 'Unidades montadas', 'en': 'Mounted drives', 'fr': 'Lecteurs montés',
+        'pt': 'Unidades montadas', 'de': 'Gemountete Laufwerke', 'it': 'Unità montate',
+        'hi': 'माउंट किए गए ड्राइव', 'zh': '已挂载的驱动器', 'ru': 'Подключенные диски',
+        'ro': 'Unități montate'
+    },
     'winfsp_ok': {
         'es': 'WinFsp: OK', 'en': 'WinFsp: OK', 'fr': 'WinFsp: OK',
         'pt': 'WinFsp: OK', 'de': 'WinFsp: OK', 'it': 'WinFsp: OK',
