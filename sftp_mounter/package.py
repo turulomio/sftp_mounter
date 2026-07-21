@@ -183,6 +183,7 @@ def run_packaging():
         "--onefile",
         "--noconsole",
         "--name", "SFTPMounter",
+        "--icon=sftp_mounter/logo.ico",
         f"--add-data=build/bin{separator}bin",
         "--distpath", "dist",
         "--workpath", "build",

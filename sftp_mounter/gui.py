@@ -63,8 +63,9 @@ QLineEdit {
     color: #ffffff;
     border: 1px solid #3c3c52;
     border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 13px;
+    padding: 10px 14px;
+    font-size: 14px;
+    min-height: 22px;
     selection-background-color: #5d5b8f;
 }
 
@@ -77,9 +78,9 @@ QComboBox {
     color: #ffffff;
     border: 1px solid #3c3c52;
     border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 13px;
-    min-height: 20px;
+    padding: 8px 14px;
+    font-size: 14px;
+    min-height: 22px;
 }
 
 QComboBox:focus {
@@ -105,8 +106,8 @@ QPushButton {
     color: #ffffff;
     border: none;
     border-radius: 6px;
-    padding: 10px 16px;
-    font-size: 13px;
+    padding: 11px 16px;
+    font-size: 14px;
     font-weight: bold;
 }
 
@@ -222,7 +223,8 @@ class MainWindow(QWidget):
         Configura los marcos de perfil, credenciales, letras de unidad y botones de acción.
         """
         self.setObjectName("mainWidget")
-        self.setMinimumSize(480, 600)
+        self.setMinimumSize(500, 700)
+        self.resize(500, 700)
         self.setStyleSheet(QSS_STYLE)
 
         # Main Layout
@@ -270,6 +272,11 @@ class MainWindow(QWidget):
         config_layout = QGridLayout(config_frame)
         config_layout.setContentsMargins(15, 15, 15, 15)
         config_layout.setSpacing(12)
+        
+        # Configurar estiramiento de columnas para estabilidad ante widgets ocultos
+        config_layout.setColumnStretch(0, 0)
+        config_layout.setColumnStretch(1, 1)
+        config_layout.setColumnStretch(2, 0)
 
         # Host
         self.lbl_host = QLabel()
@@ -282,7 +289,7 @@ class MainWindow(QWidget):
         config_layout.addWidget(self.lbl_port, 1, 0)
         self.txt_port = QLineEdit("22")
         self.txt_port.setFixedWidth(80)
-        config_layout.addWidget(self.txt_port, 1, 1, 1, 2)
+        config_layout.addWidget(self.txt_port, 1, 1)
 
         # User
         self.lbl_user = QLabel()
@@ -316,7 +323,7 @@ class MainWindow(QWidget):
 
         self.btn_browse_key = QPushButton()
         self.btn_browse_key.setObjectName("btnSecondary")
-        self.btn_browse_key.setFixedWidth(80)
+        self.btn_browse_key.setFixedWidth(90)
         self.btn_browse_key.setVisible(False)
         self.btn_browse_key.clicked.connect(self.on_browse_key_clicked)
         config_layout.addWidget(self.btn_browse_key, 5, 2)
@@ -897,7 +904,24 @@ class MainWindow(QWidget):
         if not hasattr(self, 'tray_icon'):
             self.tray_icon = QSystemTrayIcon(self)
             
-            icon = self.style().standardIcon(QStyle.SP_DriveHDIcon)
+            # Intentar cargar el logotipo personalizado
+            icon = None
+            try:
+                import sys
+                project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                if getattr(sys, 'frozen', False):
+                    logo_path = os.path.join(sys._MEIPASS, 'bin', 'logo.svg')
+                else:
+                    logo_path = os.path.join(project_root, 'build', 'bin', 'logo.svg')
+                
+                if os.path.exists(logo_path):
+                    icon = QIcon(logo_path)
+            except Exception as e:
+                logger.error(f"Error loading custom logo icon: {e}")
+                
+            if not icon or icon.isNull():
+                icon = self.style().standardIcon(QStyle.SP_DriveHDIcon)
+                
             self.tray_icon.setIcon(icon)
             self.setWindowIcon(icon)
             self.tray_icon.activated.connect(self.on_tray_icon_activated)

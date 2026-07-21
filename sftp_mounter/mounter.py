@@ -138,7 +138,8 @@ class Mounter:
         """
         Determina si el controlador y API del sistema de archivos WinFsp están instalados en la máquina.
         
-        Utiliza varias estrategias independientes de verificación:
+        Utiliza varias estrategias independientes de verificación, preparadas para evitar
+        falsos negativos debido a la redirección WOW64 (procesos de 32 bits en Windows de 64 bits):
         1. Comprobar la presencia física del cargador del servicio (`launcherd.exe`) en los directorios comunes de Program Files.
         2. Consultar el registro de Windows buscando la clave de instalación y el directorio base registrado.
         3. Comprobar si el servicio del kernel 'WinFsp' está registrado en el sistema.
@@ -152,16 +153,20 @@ class Mounter:
             # En Linux / macOS confiamos en la presencia de FUSE del sistema
             return True
 
-        # Estrategia 1: Directorios físicos estándar
+        # Búsqueda bajo variables de entorno de Program Files (incluyendo nativo de 64 bits en procesos 32 bits)
         possible_paths = [
             r"C:\Program Files (x86)\WinFsp\bin\launcherd.exe",
             r"C:\Program Files\WinFsp\bin\launcherd.exe"
         ]
+        prog_w6432 = os.environ.get('ProgramW6432')
+        if prog_w6432:
+            possible_paths.append(os.path.join(prog_w6432, "WinFsp", "bin", "launcherd.exe"))
+
         for path in possible_paths:
             if os.path.exists(path):
                 return True
 
-        # Estrategia 2: Inspección del Registro de Windows (InstallDir)
+        # Estrategia 2: Inspección del Registro de Windows (InstallDir) en todas las vistas (32 y 64 bits)
         try:
             import winreg
             keys = [
@@ -169,39 +174,52 @@ class Mounter:
                 (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\WinFsp")
             ]
             for root, key_path in keys:
-                try:
-                    key = winreg.OpenKey(root, key_path, 0, winreg.KEY_READ)
-                    val, _ = winreg.QueryValueEx(key, "InstallDir")
-                    winreg.CloseKey(key)
-                    if val and os.path.exists(os.path.join(val, "bin", "launcherd.exe")):
-                        return True
-                except OSError:
-                    continue
+                # Probar sin bandera, con bandera de 64 bits y con bandera de 32 bits
+                for view_flag in [0, winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]:
+                    try:
+                        key = winreg.OpenKey(root, key_path, 0, winreg.KEY_READ | view_flag)
+                        val, _ = winreg.QueryValueEx(key, "InstallDir")
+                        winreg.CloseKey(key)
+                        if val:
+                            if os.path.exists(os.path.join(val, "bin", "launcherd.exe")):
+                                return True
+                            if prog_w6432 and "Program Files" in val:
+                                val_64 = val.replace("Program Files", prog_w6432)
+                                if os.path.exists(os.path.join(val_64, "bin", "launcherd.exe")):
+                                    return True
+                    except OSError:
+                        continue
         except Exception as e:
             logger.error(f"Registry check (InstallDir) failed: {e}")
 
-        # Estrategia 3: Comprobar el servicio de kernel registrado (Services\\WinFsp)
+        # Estrategia 3: Comprobar el servicio de kernel registrado (Services\\WinFsp) en todas las vistas
         try:
             import winreg
-            try:
-                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Services\WinFsp", 0, winreg.KEY_READ)
-                winreg.CloseKey(key)
-                return True
-            except OSError:
-                pass
+            for view_flag in [0, winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]:
+                try:
+                    key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Services\WinFsp", 0, winreg.KEY_READ | view_flag)
+                    winreg.CloseKey(key)
+                    return True
+                except OSError:
+                    continue
         except Exception as e:
             logger.error(f"Registry check (Services) failed: {e}")
 
         # Estrategia 4: Presencia física de la extensión del controlador (winfsp.sys)
         try:
             sys_root = os.environ.get('SystemRoot', 'C:\\Windows')
-            winfsp_sys_path = os.path.join(sys_root, 'System32', 'drivers', 'winfsp.sys')
-            if os.path.exists(winfsp_sys_path):
-                return True
+            # Sysnative es un alias virtual que expone el System32 real de 64 bits a procesos de 32 bits
+            possible_driver_paths = [
+                os.path.join(sys_root, 'System32', 'drivers', 'winfsp.sys'),
+                os.path.join(sys_root, 'Sysnative', 'drivers', 'winfsp.sys')
+            ]
+            for dp in possible_driver_paths:
+                if os.path.exists(dp):
+                    return True
         except Exception as e:
             logger.error(f"Physical winfsp.sys file check failed: {e}")
 
-        # Estrategia 5: Comprobar claves de desinstalación de Windows
+        # Estrategia 5: Comprobar claves de desinstalación de Windows en todas las vistas
         try:
             import winreg
             uninstall_keys = [
@@ -209,16 +227,18 @@ class Mounter:
                 (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\WinFsp")
             ]
             for root, key_path in uninstall_keys:
-                try:
-                    key = winreg.OpenKey(root, key_path, 0, winreg.KEY_READ)
-                    winreg.CloseKey(key)
-                    return True
-                except OSError:
-                    continue
+                for view_flag in [0, winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY]:
+                    try:
+                        key = winreg.OpenKey(root, key_path, 0, winreg.KEY_READ | view_flag)
+                        winreg.CloseKey(key)
+                        return True
+                    except OSError:
+                        continue
         except Exception as e:
             logger.error(f"Registry check (Uninstall) failed: {e}")
 
         return False
+
 
 
     def install_winfsp(self) -> bool:
