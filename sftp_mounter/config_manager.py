@@ -37,8 +37,27 @@ Para nuevos desarrolladores:
 import os
 import json
 import logging
+from configparser_rb import string_to_rotatedbase64, rotatedbase64_to_string
 
 logger = logging.getLogger("SFTPMounter.ConfigManager")
+
+def _encode_pass(val):
+    if not val:
+        return ""
+    try:
+        return string_to_rotatedbase64(val)
+    except Exception as e:
+        logger.error(f"Error obfuscating password: {e}")
+        return val
+
+def _decode_pass(val):
+    if not val:
+        return ""
+    try:
+        return rotatedbase64_to_string(val)
+    except Exception:
+        # Fallback si era contraseña antigua en plano
+        return val
 
 class ConfigManager:
     """
@@ -127,16 +146,25 @@ class ConfigManager:
 
     def load_profiles(self):
         """
-        Carga y devuelve todos los perfiles de conexión SFTP.
+        Carga y devuelve todos los perfiles de conexión SFTP, descifrando las contraseñas guardadas.
         
         Returns:
             dict: Colección de perfiles donde la clave es el nombre del perfil y el valor sus datos de configuración.
         """
-        return self._read_raw()["profiles"]
+        raw_profiles = self._read_raw()["profiles"]
+        decoded_profiles = {}
+        for name, profile in raw_profiles.items():
+            p_copy = dict(profile)
+            if 'password' in p_copy:
+                p_copy['password'] = _decode_pass(p_copy['password'])
+            if 'key_password' in p_copy:
+                p_copy['key_password'] = _decode_pass(p_copy['key_password'])
+            decoded_profiles[name] = p_copy
+        return decoded_profiles
 
     def save_profiles(self, profiles):
         """
-        Guarda la colección completa de perfiles en el disco.
+        Guarda la colección completa de perfiles en el disco cifrando las contraseñas.
         
         Args:
             profiles (dict): Diccionario completo con todos los perfiles de usuario.
@@ -144,8 +172,17 @@ class ConfigManager:
         Returns:
             bool: True si se guardó con éxito, False en caso de error.
         """
+        encoded_profiles = {}
+        for name, profile in profiles.items():
+            p_copy = dict(profile)
+            if 'password' in p_copy:
+                p_copy['password'] = _encode_pass(p_copy['password'])
+            if 'key_password' in p_copy:
+                p_copy['key_password'] = _encode_pass(p_copy['key_password'])
+            encoded_profiles[name] = p_copy
+
         data = self._read_raw()
-        data["profiles"] = profiles
+        data["profiles"] = encoded_profiles
         return self._write_raw(data)
 
     def load_settings(self):

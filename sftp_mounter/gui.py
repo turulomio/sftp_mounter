@@ -23,7 +23,8 @@ from PySide6.QtGui import QIcon, QFont, QAction, QActionGroup
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel,
     QLineEdit, QPushButton, QComboBox, QFileDialog, QSystemTrayIcon,
-    QMenu, QMessageBox, QFrame, QStyle, QCheckBox, QMenuBar
+    QMenu, QMessageBox, QFrame, QStyle, QCheckBox, QMenuBar,
+    QDialog, QListWidget, QListWidgetItem, QScrollArea, QSplitter, QInputDialog
 )
 
 from sftp_mounter.config_manager import ConfigManager
@@ -220,7 +221,425 @@ QMenu::separator {
     background-color: #2d2d40;
     margin: 4px 0px;
 }
+
+QScrollArea {
+    border: none;
+    background-color: transparent;
+}
+
+QScrollArea > QWidget > QWidget {
+    background-color: transparent;
+}
+
+QListWidget {
+    background-color: #20202e;
+    color: #e0e0ed;
+    border: 1px solid #2d2d40;
+    border-radius: 8px;
+    padding: 5px;
+    font-size: 13px;
+}
+
+QListWidget::item {
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+}
+
+QListWidget::item:selected {
+    background-color: #7c7aeb;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+QListWidget::item:hover:!selected {
+    background-color: #2a2a3d;
+}
+
+QDialog {
+    background-color: #1a1a24;
+    color: #e0e0ed;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
 """
+
+class ProfileManagerDialog(QDialog):
+    """
+    Diálogo para crear, editar y eliminar perfiles SFTP de manera dedicada.
+    Presenta una lista de perfiles a la izquierda y el formulario de edición a la derecha.
+    """
+    def __init__(self, parent=None, config_manager=None, i18n=None, active_mounts=None):
+        super().__init__(parent)
+        self.config_manager = config_manager
+        self.i18n = i18n
+        self.active_mounts = active_mounts or {}
+        self.current_editing_profile = None
+
+        self.setWindowTitle(self.i18n.t('manage_profiles'))
+        self.setMinimumSize(720, 520)
+        self.setStyleSheet(QSS_STYLE)
+
+        self.init_ui()
+        self.load_profile_list()
+
+    def init_ui(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(12)
+
+        # Content Splitter (Left: Profile List, Right: Edit Form)
+        splitter = QSplitter(Qt.Horizontal)
+        
+        # --- LEFT PANEL ---
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(8)
+
+        self.lbl_list_title = QLabel(self.i18n.t('profile'))
+        self.lbl_list_title.setStyleSheet("font-weight: bold; font-size: 14px;")
+        left_layout.addWidget(self.lbl_list_title)
+
+        self.lst_profiles = QListWidget()
+        self.lst_profiles.currentItemChanged.connect(self.on_profile_selected)
+        left_layout.addWidget(self.lst_profiles)
+
+        left_btn_layout = QHBoxLayout()
+        self.btn_add_profile = QPushButton(self.i18n.t('add_profile'))
+        self.btn_add_profile.setObjectName("btnSecondary")
+        self.btn_add_profile.clicked.connect(self.on_add_profile_clicked)
+        left_btn_layout.addWidget(self.btn_add_profile)
+
+        self.btn_delete_profile = QPushButton(self.i18n.t('delete'))
+        self.btn_delete_profile.setObjectName("btnDanger")
+        self.btn_delete_profile.clicked.connect(self.on_delete_profile_clicked)
+        left_btn_layout.addWidget(self.btn_delete_profile)
+        left_layout.addLayout(left_btn_layout)
+
+        splitter.addWidget(left_widget)
+
+        # --- RIGHT PANEL (Form) ---
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+        right_layout.setContentsMargins(10, 0, 0, 0)
+        right_layout.setSpacing(10)
+
+        form_frame = QFrame()
+        form_frame.setObjectName("cardFrame")
+        config_layout = QGridLayout(form_frame)
+        config_layout.setContentsMargins(15, 15, 15, 15)
+        config_layout.setSpacing(10)
+
+        # Profile Name
+        self.lbl_profile_name = QLabel(self.i18n.t('profile'))
+        config_layout.addWidget(self.lbl_profile_name, 0, 0)
+        self.txt_profile_name = QLineEdit()
+        config_layout.addWidget(self.txt_profile_name, 0, 1, 1, 2)
+
+        # Host
+        self.lbl_host = QLabel(self.i18n.t('host'))
+        config_layout.addWidget(self.lbl_host, 1, 0)
+        self.txt_host = QLineEdit()
+        self.txt_host.setPlaceholderText(self.i18n.t('host_placeholder'))
+        config_layout.addWidget(self.txt_host, 1, 1, 1, 2)
+
+        # Port
+        self.lbl_port = QLabel(self.i18n.t('port'))
+        config_layout.addWidget(self.lbl_port, 2, 0)
+        self.txt_port = QLineEdit("22")
+        self.txt_port.setFixedWidth(80)
+        config_layout.addWidget(self.txt_port, 2, 1, 1, 2)
+
+        # User
+        self.lbl_user = QLabel(self.i18n.t('user'))
+        config_layout.addWidget(self.lbl_user, 3, 0)
+        self.txt_user = QLineEdit()
+        self.txt_user.setPlaceholderText(self.i18n.t('user_placeholder'))
+        config_layout.addWidget(self.txt_user, 3, 1, 1, 2)
+
+        # Auth Type
+        self.lbl_auth = QLabel(self.i18n.t('auth'))
+        config_layout.addWidget(self.lbl_auth, 4, 0)
+        self.cmb_auth_type = QComboBox()
+        self.cmb_auth_type.addItems([
+            self.i18n.t('auth_password'),
+            self.i18n.t('auth_key_no_pass'),
+            self.i18n.t('auth_key_pass')
+        ])
+        self.cmb_auth_type.currentIndexChanged.connect(self.on_auth_type_changed)
+        config_layout.addWidget(self.cmb_auth_type, 4, 1, 1, 2)
+
+        # Password / Passphrase
+        self.lbl_password = QLabel(self.i18n.t('password'))
+        config_layout.addWidget(self.lbl_password, 5, 0)
+        self.txt_password = QLineEdit()
+        self.txt_password.setEchoMode(QLineEdit.Password)
+        config_layout.addWidget(self.txt_password, 5, 1, 1, 2)
+
+        # SSH Key Path
+        self.lbl_key_path = QLabel(self.i18n.t('ssh_key'))
+        self.lbl_key_path.setVisible(False)
+        config_layout.addWidget(self.lbl_key_path, 6, 0)
+        self.txt_key_path = QLineEdit()
+        self.txt_key_path.setPlaceholderText(self.i18n.t('ssh_key_placeholder'))
+        self.txt_key_path.setVisible(False)
+        config_layout.addWidget(self.txt_key_path, 6, 1)
+
+        self.btn_browse_key = QPushButton(self.i18n.t('browse'))
+        self.btn_browse_key.setObjectName("btnSecondary")
+        self.btn_browse_key.setFixedWidth(85)
+        self.btn_browse_key.setVisible(False)
+        self.btn_browse_key.clicked.connect(self.on_browse_key_clicked)
+        config_layout.addWidget(self.btn_browse_key, 6, 2)
+
+        # Remote Path
+        self.lbl_remote_path = QLabel(self.i18n.t('remote_path'))
+        config_layout.addWidget(self.lbl_remote_path, 7, 0)
+        self.txt_remote_path = QLineEdit()
+        self.txt_remote_path.setPlaceholderText(self.i18n.t('remote_path_placeholder'))
+        config_layout.addWidget(self.txt_remote_path, 7, 1, 1, 2)
+
+        # Local Drive Letter
+        self.lbl_local_drive = QLabel(self.i18n.t('local_drive'))
+        config_layout.addWidget(self.lbl_local_drive, 8, 0)
+        self.cmb_drive_letter = QComboBox()
+        self.populate_drive_letters()
+        config_layout.addWidget(self.cmb_drive_letter, 8, 1, 1, 2)
+
+        # Auto-mount
+        self.chk_auto_mount = QCheckBox(self.i18n.t('auto_mount'))
+        config_layout.addWidget(self.chk_auto_mount, 9, 1, 1, 2)
+
+        right_layout.addWidget(form_frame)
+
+        splitter.addWidget(right_widget)
+        splitter.setSizes([220, 480])
+
+        main_layout.addWidget(splitter, 1)
+
+        # Bottom Buttons
+        bottom_btn_layout = QHBoxLayout()
+        bottom_btn_layout.addStretch()
+
+        self.btn_save = QPushButton(self.i18n.t('save'))
+        self.btn_save.clicked.connect(self.on_save_clicked)
+        bottom_btn_layout.addWidget(self.btn_save)
+
+        self.btn_close = QPushButton(self.i18n.t('close'))
+        self.btn_close.setObjectName("btnSecondary")
+        self.btn_close.clicked.connect(self.accept)
+        bottom_btn_layout.addWidget(self.btn_close)
+
+        main_layout.addLayout(bottom_btn_layout)
+
+    def populate_drive_letters(self):
+        self.cmb_drive_letter.clear()
+        if os.name == 'nt':
+            for char in range(ord('Z'), ord('C'), -1):
+                letter = f"{chr(char)}:"
+                self.cmb_drive_letter.addItem(letter)
+        else:
+            self.cmb_drive_letter.addItem(os.path.expanduser("~/mnt/sftp_drive"))
+            self.cmb_drive_letter.addItem(os.path.expanduser("~/mnt/sftp_test"))
+
+    def load_profile_list(self):
+        self.lst_profiles.blockSignals(True)
+        self.lst_profiles.clear()
+        profiles = self.config_manager.load_profiles()
+        for name in profiles.keys():
+            item = QListWidgetItem(name)
+            self.lst_profiles.addItem(item)
+        self.lst_profiles.blockSignals(False)
+
+        if self.lst_profiles.count() > 0:
+            self.lst_profiles.setCurrentRow(0)
+        else:
+            self.clear_form()
+
+    def clear_form(self):
+        self.current_editing_profile = None
+        self.txt_profile_name.clear()
+        self.txt_host.clear()
+        self.txt_port.setText("22")
+        self.txt_user.clear()
+        self.cmb_auth_type.setCurrentIndex(0)
+        self.txt_password.clear()
+        self.txt_key_path.clear()
+        self.txt_remote_path.clear()
+        self.chk_auto_mount.setChecked(False)
+        self.btn_delete_profile.setEnabled(False)
+
+    def on_profile_selected(self, current, previous):
+        if not current:
+            self.clear_form()
+            return
+
+        profile_name = current.text()
+        self.current_editing_profile = profile_name
+        profile = self.config_manager.get_profile(profile_name)
+        if not profile:
+            return
+
+        self.txt_profile_name.setText(profile_name)
+        self.txt_host.setText(profile.get('host', ''))
+        self.txt_port.setText(str(profile.get('port', '22')))
+        self.txt_user.setText(profile.get('user', ''))
+
+        auth = profile.get('auth_type', 'password')
+        if auth == 'key':
+            auth_idx = 2 if profile.get('key_password') else 1
+        else:
+            auth_idx = 0
+        self.cmb_auth_type.setCurrentIndex(auth_idx)
+
+        if auth_idx == 2:
+            self.txt_password.setText(profile.get('key_password', ''))
+        else:
+            self.txt_password.setText(profile.get('password', ''))
+
+        self.txt_key_path.setText(profile.get('key_path', ''))
+        self.txt_remote_path.setText(profile.get('remote_path', ''))
+        self.chk_auto_mount.setChecked(profile.get('auto_mount', False))
+
+        drive = profile.get('drive_letter', '')
+        idx = self.cmb_drive_letter.findText(drive)
+        if idx >= 0:
+            self.cmb_drive_letter.setCurrentIndex(idx)
+
+        is_mounted = drive in self.active_mounts
+        self.btn_delete_profile.setEnabled(not is_mounted)
+        self.btn_save.setEnabled(not is_mounted)
+
+    def on_auth_type_changed(self, index):
+        if index == 0:  # Password
+            self.lbl_password.setText(self.i18n.t('password'))
+            self.lbl_password.setVisible(True)
+            self.txt_password.setVisible(True)
+            self.lbl_key_path.setVisible(False)
+            self.txt_key_path.setVisible(False)
+            self.btn_browse_key.setVisible(False)
+        elif index == 1:  # Key only
+            self.lbl_password.setVisible(False)
+            self.txt_password.setVisible(False)
+            self.lbl_key_path.setVisible(True)
+            self.txt_key_path.setVisible(True)
+            self.btn_browse_key.setVisible(True)
+        elif index == 2:  # Key + Passphrase
+            self.lbl_password.setText(self.i18n.t('passphrase'))
+            self.lbl_password.setVisible(True)
+            self.txt_password.setVisible(True)
+            self.lbl_key_path.setVisible(True)
+            self.txt_key_path.setVisible(True)
+            self.btn_browse_key.setVisible(True)
+
+    def on_browse_key_clicked(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, self.i18n.t('ssh_key'), "", "All Files (*);;Key Files (*.pem *.key id_rsa)"
+        )
+        if file_path:
+            self.txt_key_path.setText(file_path)
+
+    def on_add_profile_clicked(self):
+        name, ok = QInputDialog.getText(
+            self, self.i18n.t('add_profile'), self.i18n.t('input_profile_name_msg')
+        )
+        if not ok or not name.strip():
+            return
+
+        name = name.strip()
+        profiles = self.config_manager.load_profiles()
+        if name in profiles:
+            QMessageBox.warning(self, self.i18n.t('error_save_title'), f"El perfil '{name}' ya existe.")
+            return
+
+        self.clear_form()
+        self.current_editing_profile = None
+        self.txt_profile_name.setText(name)
+        item = QListWidgetItem(name)
+        self.lst_profiles.addItem(item)
+        self.lst_profiles.setCurrentItem(item)
+
+    def on_delete_profile_clicked(self):
+        if not self.current_editing_profile:
+            return
+
+        profile_name = self.current_editing_profile
+        profile = self.config_manager.get_profile(profile_name)
+        if profile and profile.get('drive_letter', '') in self.active_mounts:
+            QMessageBox.warning(self, self.i18n.t('error_save_title'), self.i18n.t('profile_active_warning'))
+            return
+
+        reply = QMessageBox.question(
+            self,
+            self.i18n.t('confirm_delete_title'),
+            self.i18n.t('confirm_delete_msg', profile_name=profile_name),
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            if self.config_manager.delete_profile(profile_name):
+                self.load_profile_list()
+            else:
+                QMessageBox.critical(self, self.i18n.t('error_save_title'), self.i18n.t('error_delete_failed'))
+
+    def on_save_clicked(self):
+        name = self.txt_profile_name.text().strip()
+        host = self.txt_host.text().strip()
+        user = self.txt_user.text().strip()
+
+        if not name or not host or not user:
+            QMessageBox.warning(self, self.i18n.t('error_save_title'), self.i18n.t('error_save_required'))
+            return
+
+        drive = self.cmb_drive_letter.currentText()
+        if drive in self.active_mounts:
+            QMessageBox.warning(self, self.i18n.t('error_save_title'), self.i18n.t('profile_active_warning'))
+            return
+
+        idx = self.cmb_auth_type.currentIndex()
+        auth_type = 'password'
+        password = ''
+        key_path = ''
+        key_password = ''
+
+        if idx == 0:
+            auth_type = 'password'
+            password = self.txt_password.text()
+        elif idx == 1:
+            auth_type = 'key'
+            key_path = self.txt_key_path.text().strip()
+        elif idx == 2:
+            auth_type = 'key'
+            key_path = self.txt_key_path.text().strip()
+            key_password = self.txt_password.text()
+
+        profile_data = {
+            'host': host,
+            'port': int(self.txt_port.text().strip() or "22"),
+            'user': user,
+            'auth_type': auth_type,
+            'password': password,
+            'key_path': key_path,
+            'key_password': key_password,
+            'remote_path': self.txt_remote_path.text().strip(),
+            'drive_letter': drive,
+            'auto_mount': self.chk_auto_mount.isChecked()
+        }
+
+        # Si se cambió el nombre de un perfil existente, eliminar el viejo
+        if self.current_editing_profile and self.current_editing_profile != name:
+            self.config_manager.delete_profile(self.current_editing_profile)
+
+        if self.config_manager.save_profile(name, profile_data):
+            self.current_editing_profile = name
+            self.load_profile_list()
+            # Seleccionar el ítem recién guardado
+            items = self.lst_profiles.findItems(name, Qt.MatchExactly)
+            if items:
+                self.lst_profiles.setCurrentItem(items[0])
+            QMessageBox.information(self, self.i18n.t('profile_saved_title'), self.i18n.t('profile_saved_msg', profile_name=name))
+        else:
+            QMessageBox.critical(self, self.i18n.t('error_save_title'), self.i18n.t('error_save_failed'))
+
 
 class MainWindow(QWidget):
     """
@@ -249,22 +668,16 @@ class MainWindow(QWidget):
         self.is_connecting = False         # Flag para bloquear re-intentos de conexión
 
         self.init_ui()
-        self.load_profiles_into_combo()
         self.load_global_settings()
         self.check_winfsp_status()
+        self.load_profiles_dashboard()
         
-        # Iniciar el auto-montaje con un breve retraso (500 ms) para permitir que la interfaz se dibuje
-        # completamente en la pantalla antes de iniciar procesos secundarios de red bloqueantes.
         QTimer.singleShot(500, self.perform_auto_mount)
 
     def init_ui(self):
-        """
-        Construye la jerarquía completa de widgets y layouts de la ventana.
-        Configura los marcos de perfil, credenciales, letras de unidad y botones de acción.
-        """
         self.setObjectName("mainWidget")
-        self.setMinimumSize(560, 840)
-        self.resize(560, 840)
+        self.setMinimumSize(580, 680)
+        self.resize(580, 680)
         self.setStyleSheet(QSS_STYLE)
 
         # Main Layout
@@ -280,6 +693,13 @@ class MainWindow(QWidget):
         self.menu_options = QMenu(self)
         self.menu_bar.addMenu(self.menu_options)
         
+        # Gestionar perfiles
+        self.act_manage_profiles = QAction(self)
+        self.act_manage_profiles.triggered.connect(self.on_open_profile_manager)
+        self.menu_options.addAction(self.act_manage_profiles)
+
+        self.menu_options.addSeparator()
+
         # Iniciar con Windows
         self.act_start_with_win = QAction(self)
         self.act_start_with_win.setCheckable(True)
@@ -333,119 +753,6 @@ class MainWindow(QWidget):
         
         main_layout.addLayout(title_layout)
 
-        # ----------------- SECTION: PROFILE SELECTOR -----------------
-        profile_frame = QFrame()
-        profile_frame.setObjectName("cardFrame")
-        profile_layout = QHBoxLayout(profile_frame)
-        profile_layout.setContentsMargins(12, 12, 12, 12)
-        
-        self.lbl_profile = QLabel()
-        profile_layout.addWidget(self.lbl_profile)
-        
-        self.cmb_profiles = QComboBox()
-        self.cmb_profiles.currentIndexChanged.connect(self.on_profile_selection_changed)
-        profile_layout.addWidget(self.cmb_profiles, 1)
-
-        self.btn_delete_profile = QPushButton()
-        self.btn_delete_profile.setObjectName("btnDanger")
-        self.btn_delete_profile.setFixedWidth(80)
-        self.btn_delete_profile.clicked.connect(self.on_delete_profile_clicked)
-        profile_layout.addWidget(self.btn_delete_profile)
-        main_layout.addWidget(profile_frame)
-
-        # ----------------- SECTION: SFTP CONFIGURATION -----------------
-        config_frame = QFrame()
-        config_frame.setObjectName("cardFrame")
-        config_layout = QGridLayout(config_frame)
-        config_layout.setContentsMargins(15, 15, 15, 15)
-        config_layout.setSpacing(12)
-        
-        # Configurar estiramiento de columnas para estabilidad ante widgets ocultos
-        config_layout.setColumnStretch(0, 0)
-        config_layout.setColumnStretch(1, 1)
-        config_layout.setColumnStretch(2, 0)
-
-        # Host
-        self.lbl_host = QLabel()
-        config_layout.addWidget(self.lbl_host, 0, 0)
-        self.txt_host = QLineEdit()
-        config_layout.addWidget(self.txt_host, 0, 1)
-
-        # Port
-        self.lbl_port = QLabel()
-        config_layout.addWidget(self.lbl_port, 1, 0)
-        self.txt_port = QLineEdit("22")
-        self.txt_port.setFixedWidth(80)
-        config_layout.addWidget(self.txt_port, 1, 1)
-
-        # User
-        self.lbl_user = QLabel()
-        config_layout.addWidget(self.lbl_user, 2, 0)
-        self.txt_user = QLineEdit()
-        config_layout.addWidget(self.txt_user, 2, 1)
-
-        # Auth Type
-        self.lbl_auth = QLabel()
-        config_layout.addWidget(self.lbl_auth, 3, 0)
-        self.cmb_auth_type = QComboBox()
-        self.cmb_auth_type.addItems(["", "", ""])
-        self.cmb_auth_type.currentIndexChanged.connect(self.on_auth_type_changed)
-        config_layout.addWidget(self.cmb_auth_type, 3, 1)
-
-        # Password (Row 4)
-        self.lbl_password = QLabel()
-        config_layout.addWidget(self.lbl_password, 4, 0)
-        self.txt_password = QLineEdit()
-        self.txt_password.setEchoMode(QLineEdit.Password)
-        config_layout.addWidget(self.txt_password, 4, 1)
-
-        # Private Key Path (Row 5 - Hidden by default)
-        self.lbl_key_path = QLabel()
-        self.lbl_key_path.setVisible(False)
-        config_layout.addWidget(self.lbl_key_path, 5, 0)
-        
-        self.txt_key_path = QLineEdit()
-        self.txt_key_path.setVisible(False)
-        config_layout.addWidget(self.txt_key_path, 5, 1)
-
-        self.btn_browse_key = QPushButton()
-        self.btn_browse_key.setObjectName("btnSecondary")
-        self.btn_browse_key.setFixedWidth(95)
-        self.btn_browse_key.setVisible(False)
-        self.btn_browse_key.clicked.connect(self.on_browse_key_clicked)
-        config_layout.addWidget(self.btn_browse_key, 5, 2)
-
-        # Remote Path
-        self.lbl_remote_path = QLabel()
-        config_layout.addWidget(self.lbl_remote_path, 6, 0)
-        self.txt_remote_path = QLineEdit()
-        config_layout.addWidget(self.txt_remote_path, 6, 1)
-
-        main_layout.addWidget(config_frame)
-
-        # ----------------- SECTION: MOUNT CONFIGURATION -----------------
-        mount_frame = QFrame()
-        mount_frame.setObjectName("cardFrame")
-        mount_layout = QHBoxLayout(mount_frame)
-        mount_layout.setContentsMargins(12, 12, 12, 12)
-
-        self.lbl_local_drive = QLabel()
-        mount_layout.addWidget(self.lbl_local_drive)
-        self.cmb_drive_letter = QComboBox()
-        self.populate_drive_letters()
-        self.cmb_drive_letter.currentIndexChanged.connect(self.update_status_label)
-        mount_layout.addWidget(self.cmb_drive_letter, 1)
-        
-        self.chk_auto_mount = QCheckBox()
-        mount_layout.addWidget(self.chk_auto_mount)
-        
-        self.btn_save_profile = QPushButton()
-        self.btn_save_profile.setObjectName("btnSecondary")
-        self.btn_save_profile.clicked.connect(self.on_save_profile_clicked)
-        mount_layout.addWidget(self.btn_save_profile)
-
-        main_layout.addWidget(mount_frame)
-
         # ----------------- WinFsp INSTALL CARD (Conditional) -----------------
         self.winfsp_card = QFrame()
         self.winfsp_card.setObjectName("statusCard")
@@ -465,148 +772,233 @@ class MainWindow(QWidget):
         self.winfsp_card.setVisible(False)
         main_layout.addWidget(self.winfsp_card)
 
-        # ----------------- SECTION: STATUS CARD & ACTIONS -----------------
-        status_card = QFrame()
-        status_card.setObjectName("statusCard")
-        status_card_layout = QVBoxLayout(status_card)
-        status_card_layout.setContentsMargins(15, 15, 15, 15)
-        status_card_layout.setSpacing(10)
+        # ----------------- DASHBOARD: SCROLL AREA DE PERFILES -----------------
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
 
-        # Status Label
-        status_header_layout = QHBoxLayout()
-        self.lbl_status_header = QLabel()
-        status_header_layout.addWidget(self.lbl_status_header)
-        
-        self.lbl_status = QLabel()
-        self.lbl_status.setObjectName("statusLabel")
-        self.lbl_status.setStyleSheet("color: #8b8b9c;")
-        status_header_layout.addWidget(self.lbl_status, 1)
-        status_card_layout.addLayout(status_header_layout)
+        self.scroll_widget = QWidget()
+        self.cards_layout = QVBoxLayout(self.scroll_widget)
+        self.cards_layout.setContentsMargins(0, 0, 0, 0)
+        self.cards_layout.setSpacing(12)
 
-        # Action Buttons Layout
-        btn_layout = QHBoxLayout()
-        self.btn_connect = QPushButton()
-        self.btn_connect.clicked.connect(self.on_connect_clicked)
-        btn_layout.addWidget(self.btn_connect)
+        self.scroll_area.setWidget(self.scroll_widget)
+        main_layout.addWidget(self.scroll_area, 1)
 
-        self.btn_disconnect = QPushButton()
-        self.btn_disconnect.setObjectName("btnDanger")
-        self.btn_disconnect.setEnabled(False)
-        self.btn_disconnect.clicked.connect(self.on_disconnect_clicked)
-        btn_layout.addWidget(self.btn_disconnect)
-        status_card_layout.addLayout(btn_layout)
-
-        main_layout.addWidget(status_card)
-
-        # Inicializar los textos localizados en la interfaz
+        # Retranslate y System Tray
         self.retranslate_ui()
-
-        # Setup System Tray
         self.setup_system_tray()
 
+    def load_profiles_dashboard(self):
+        """
+        Limpia y reconstruye dinámicamente las tarjetas de perfiles en el Dashboard.
+        """
+        # Limpiar widgets anteriores en cards_layout
+        while self.cards_layout.count():
+            item = self.cards_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+        profiles = self.config_manager.load_profiles()
+        self.profile_cards = {}  # {name: {'frame': frame, 'btn_action': btn, 'lbl_status': lbl, 'profile': profile}}
+
+        if not profiles:
+            no_profiles_lbl = QLabel(self.i18n.t('no_profiles'))
+            no_profiles_lbl.setAlignment(Qt.AlignCenter)
+            no_profiles_lbl.setStyleSheet("color: #6a6a85; font-size: 14px; margin-top: 50px;")
+            self.cards_layout.addWidget(no_profiles_lbl)
+            self.cards_layout.addStretch()
+            return
+
+        for name, profile in profiles.items():
+            card_frame = QFrame()
+            card_frame.setObjectName("cardFrame")
+            card_layout = QHBoxLayout(card_frame)
+            card_layout.setContentsMargins(15, 12, 15, 12)
+
+            info_layout = QVBoxLayout()
+            info_layout.setSpacing(4)
+
+            # Nombre y Unidad
+            header_layout = QHBoxLayout()
+            lbl_name = QLabel(name)
+            lbl_name.setStyleSheet("font-weight: bold; font-size: 15px; color: #ffffff;")
+            header_layout.addWidget(lbl_name)
+
+            drive = profile.get('drive_letter', '')
+            if drive:
+                lbl_drive = QLabel(f"[{drive.upper()}]")
+                lbl_drive.setStyleSheet("color: #7c7aeb; font-weight: bold; font-size: 13px;")
+                header_layout.addWidget(lbl_drive)
+            header_layout.addStretch()
+
+            info_layout.addLayout(header_layout)
+
+            # Detalle conexión (user@host:port)
+            host = profile.get('host', '')
+            port = profile.get('port', 22)
+            user = profile.get('user', '')
+            remote_path = profile.get('remote_path', '')
+            auto_mount = profile.get('auto_mount', False)
+            auto_mount_str = self.i18n.t('yes') if auto_mount else self.i18n.t('no')
+            
+            detail_str = f"{user}@{host}:{port}"
+            if remote_path:
+                detail_str += f" ({remote_path})"
+            detail_str += f" • {self.i18n.t('auto_mount_status', status=auto_mount_str)}"
+
+            lbl_detail = QLabel(detail_str)
+            lbl_detail.setStyleSheet("color: #8b8b9c; font-size: 12px;")
+            info_layout.addWidget(lbl_detail)
+
+            # Estado
+            lbl_status = QLabel(self.i18n.t('status_disconnected'))
+            lbl_status.setStyleSheet("color: #8b8b9c; font-size: 12px; font-weight: bold;")
+            info_layout.addWidget(lbl_status)
+
+            card_layout.addLayout(info_layout, 1)
+
+            # Botón único de acción (más ancho para evitar entrecortar texto)
+            btn_action = QPushButton(self.i18n.t('connect'))
+            btn_action.setMinimumWidth(180)
+            btn_action.setStyleSheet("padding: 11px 20px; font-size: 13px;")
+            btn_action.clicked.connect(lambda checked=False, p_name=name: self.on_card_action_clicked(p_name))
+            card_layout.addWidget(btn_action)
+
+            self.cards_layout.addWidget(card_frame)
+
+            self.profile_cards[name] = {
+                'frame': card_frame,
+                'btn_action': btn_action,
+                'lbl_status': lbl_status,
+                'profile': profile
+            }
+
+            self.update_card_status(name)
+
+        self.cards_layout.addStretch()
+
+    def update_card_status(self, profile_name):
+        """
+        Actualiza el aspecto de una tarjeta de perfil según si la unidad correspondiente está montada.
+        """
+        card = self.profile_cards.get(profile_name)
+        if not card:
+            return
+
+        profile = card['profile']
+        drive = profile.get('drive_letter', '')
+        is_mounted = drive in self.mounter.active_mounts
+
+        if is_mounted:
+            card['lbl_status'].setText(self.i18n.t('status_mounted', drive=drive.upper()))
+            card['lbl_status'].setStyleSheet("color: #50fa7b; font-size: 12px; font-weight: bold;")
+            card['btn_action'].setText(self.i18n.t('disconnect'))
+            card['btn_action'].setObjectName("btnDanger")
+            card['btn_action'].setStyleSheet("background-color: #cf4b61; min-width: 180px; padding: 11px 20px; font-size: 13px;")
+            card['btn_action'].setEnabled(True)
+        else:
+            card['lbl_status'].setText(self.i18n.t('status_disconnected'))
+            card['lbl_status'].setStyleSheet("color: #8b8b9c; font-size: 12px; font-weight: bold;")
+            card['btn_action'].setText(self.i18n.t('connect'))
+            card['btn_action'].setObjectName("")
+            card['btn_action'].setStyleSheet("background-color: #7c7aeb; min-width: 180px; padding: 11px 20px; font-size: 13px;")
+            card['btn_action'].setEnabled(True)
+
+    def on_card_action_clicked(self, profile_name):
+        """
+        Gatillado al pulsar el botón de acción en la tarjeta de un perfil.
+        Si la unidad está montada, la desconecta. De lo contrario, la conecta.
+        """
+        card = self.profile_cards.get(profile_name)
+        if not card:
+            return
+
+        profile = card['profile']
+        drive = profile.get('drive_letter', '')
+
+        if drive in self.mounter.active_mounts:
+            # Desconectar
+            card['lbl_status'].setText(self.i18n.t('status_unmounting'))
+            card['lbl_status'].setStyleSheet("color: #ffb86c; font-size: 12px; font-weight: bold;")
+            card['btn_action'].setEnabled(False)
+            self.app.processEvents()
+
+            success = self.mounter.unmount_sftp(drive)
+            if success:
+                self.tray_icon.showMessage(
+                    "SFTP Drive Mounter",
+                    self.i18n.t('disconnection_ok_msg', drive=drive.upper()),
+                    QSystemTrayIcon.Information,
+                    2000
+                )
+            else:
+                QMessageBox.warning(self, self.i18n.t('unmount_warning_title'), self.i18n.t('unmount_warning_msg'))
+
+            self.update_card_status(profile_name)
+            self.setup_system_tray()
+        else:
+            # Conectar
+            card['lbl_status'].setText(self.i18n.t('status_connecting'))
+            card['lbl_status'].setStyleSheet("color: #ffb86c; font-size: 12px; font-weight: bold;")
+            card['btn_action'].setEnabled(False)
+            self.app.processEvents()
+
+            success, message = self.mounter.mount_sftp(profile)
+
+            if success:
+                self.tray_icon.showMessage(
+                    "SFTP Drive Mounter",
+                    self.i18n.t('connection_ok_msg', drive=drive.upper()),
+                    QSystemTrayIcon.Information,
+                    3000
+                )
+            else:
+                display_msg = message
+                if "already in use" in message or "ya está en uso" in message:
+                    display_msg = self.i18n.t('net_use_in_use', drive=drive.upper())
+                QMessageBox.critical(self, self.i18n.t('connection_fail_title'), display_msg)
+
+            self.update_card_status(profile_name)
+            self.setup_system_tray()
+
+    def on_open_profile_manager(self):
+        """
+        Abre el diálogo de gestión de perfiles ProfileManagerDialog.
+        Al cerrar, recarga dinámicamente las tarjetas del Dashboard.
+        """
+        dialog = ProfileManagerDialog(
+            parent=self,
+            config_manager=self.config_manager,
+            i18n=self.i18n,
+            active_mounts=self.mounter.active_mounts
+        )
+        dialog.exec_()
+        self.load_profiles_dashboard()
+
     def retranslate_ui(self):
-        """
-        Actualiza dinámicamente todos los textos visibles de la UI según el idioma seleccionado.
-        Esto permite cambiar el idioma en caliente sin necesidad de reiniciar la aplicación.
-        """
-        # Título de ventana y etiquetas fijas
         self.setWindowTitle(self.i18n.t('title'))
         self.lbl_title.setText(self.i18n.t('title'))
-        self.lbl_profile.setText(self.i18n.t('profile'))
-        self.btn_delete_profile.setText(self.i18n.t('delete'))
-        self.lbl_host.setText(self.i18n.t('host'))
-        self.txt_host.setPlaceholderText(self.i18n.t('host_placeholder'))
-        self.lbl_port.setText(self.i18n.t('port'))
-        self.lbl_user.setText(self.i18n.t('user'))
-        self.txt_user.setPlaceholderText(self.i18n.t('user_placeholder'))
-        self.lbl_auth.setText(self.i18n.t('auth'))
-        self.lbl_key_path.setText(self.i18n.t('ssh_key'))
-        self.txt_key_path.setPlaceholderText(self.i18n.t('ssh_key_placeholder'))
-        self.btn_browse_key.setText(self.i18n.t('browse'))
-        self.lbl_remote_path.setText(self.i18n.t('remote_path'))
-        self.txt_remote_path.setPlaceholderText(self.i18n.t('remote_path_placeholder'))
-        self.lbl_local_drive.setText(self.i18n.t('local_drive'))
-        self.btn_save_profile.setText(self.i18n.t('save_profile'))
-        self.chk_auto_mount.setText(self.i18n.t('auto_mount'))
         self.lbl_winfsp_missing.setText(self.i18n.t('winfsp_missing_card'))
         self.btn_install_winfsp.setText(self.i18n.t('install_winfsp'))
-        self.lbl_status_header.setText(self.i18n.t('status'))
-        self.btn_connect.setText(self.i18n.t('connect'))
-        self.btn_disconnect.setText(self.i18n.t('disconnect'))
 
         # Menús y acciones
         self.menu_options.setTitle(self.i18n.t('menu_options'))
+        self.act_manage_profiles.setText(self.i18n.t('manage_profiles'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
         self.act_start_with_win.setText(self.i18n.t('start_with_win'))
         self.act_minimize_to_tray.setText(self.i18n.t('minimize_to_tray'))
         self.menu_language.setTitle(self.i18n.t('menu_language'))
         self.act_about.setText(self.i18n.t('about'))
-        
-        # Combo boxes items
-        self.cmb_auth_type.setItemText(0, self.i18n.t('auth_password'))
-        self.cmb_auth_type.setItemText(1, self.i18n.t('auth_key_no_pass'))
-        self.cmb_auth_type.setItemText(2, self.i18n.t('auth_key_pass'))
-        
-        # Sincronizar combobox de perfiles
-        current_profile_idx = self.cmb_profiles.currentIndex()
-        self.load_profiles_into_combo()
-        if current_profile_idx >= 0 and current_profile_idx < self.cmb_profiles.count():
-            self.cmb_profiles.blockSignals(True)
-            self.cmb_profiles.setCurrentIndex(current_profile_idx)
-            self.cmb_profiles.blockSignals(False)
-        
-        # Asegurar que el label de la contraseña/frase de paso refleje el cambio de idioma
-        self.on_auth_type_changed(self.cmb_auth_type.currentIndex())
-        
-        # Sincronizar el label de estado
-        self.update_status_label()
-        
-        # Sincronizar aviso de WinFsp
+
         self.check_winfsp_status()
-        
-        # Re-inicializar el menú contextual de la bandeja de sistema
+        if hasattr(self, 'profile_cards'):
+            self.load_profiles_dashboard()
+
         if hasattr(self, 'tray_icon'):
             self.setup_system_tray()
 
-    def get_selected_drive_letter(self):
-        """
-        Devuelve la letra de unidad (con dos puntos) o ruta seleccionada en el combo box.
-        """
-        drive = self.cmb_drive_letter.currentText().strip()
-        if drive and os.name == 'nt' and not drive.endswith(':'):
-            drive += ':'
-        return drive
-
-    def update_status_label(self):
-        """
-        Actualiza el texto del label de estado (lbl_status) según la conexión activa
-        y aplica estilos de color correspondientes.
-        """
-        drive = self.get_selected_drive_letter()
-        is_mounted = drive in self.mounter.active_mounts
-        
-        if is_mounted:
-            self.lbl_status.setText(self.i18n.t('status_mounted', drive=drive.upper()))
-            self.lbl_status.setStyleSheet("color: #50fa7b;")
-            self.btn_disconnect.setEnabled(True)
-            self.btn_connect.setEnabled(False)
-            self.set_ui_enabled(False)
-        elif self.is_connecting:
-            self.lbl_status.setText(self.i18n.t('status_connecting'))
-            self.lbl_status.setStyleSheet("color: #ffb86c;")
-            self.btn_disconnect.setEnabled(False)
-            self.btn_connect.setEnabled(False)
-        else:
-            self.lbl_status.setText(self.i18n.t('status_disconnected'))
-            self.lbl_status.setStyleSheet("color: #8b8b9c;")
-            self.btn_disconnect.setEnabled(False)
-            self.btn_connect.setEnabled(True)
-            self.set_ui_enabled(True)
-
     def check_winfsp_status(self):
-        """
-        Verifica el estado del controlador WinFsp en el sistema y actualiza los componentes visuales.
-        """
         installed = self.mounter.is_winfsp_installed()
         if installed:
             self.lbl_winfsp_warning.setText(self.i18n.t('winfsp_ok'))
@@ -847,8 +1239,6 @@ class MainWindow(QWidget):
         Lanza el proceso de instalación pasiva de WinFsp.
         """
         self.btn_install_winfsp.setEnabled(False)
-        self.lbl_status.setText(self.i18n.t('installing_winfsp'))
-        self.lbl_status.setStyleSheet("color: #ffb86c;")
         self.app.processEvents()
         
         success = self.mounter.install_winfsp()
@@ -860,98 +1250,10 @@ class MainWindow(QWidget):
             QMessageBox.information(
                 self, self.i18n.t('install_winfsp_ok_title'), self.i18n.t('install_winfsp_ok_msg')
             )
-            self.update_status_label()
         else:
             QMessageBox.critical(
                 self, self.i18n.t('install_winfsp_fail_title'), self.i18n.t('install_winfsp_fail_msg')
             )
-            self.lbl_status.setText(self.i18n.t('status_error'))
-            self.lbl_status.setStyleSheet("color: #ff5555;")
-
-    def on_connect_clicked(self):
-        """
-        Inicia de forma asíncrona la conexión SFTP y monta la unidad de red.
-        """
-        data = self.get_current_form_data()
-        
-        if not data['host'] or not data['user']:
-            QMessageBox.warning(self, self.i18n.t('error_incomplete_title'), self.i18n.t('error_incomplete_msg'))
-            return
-
-        self.is_connecting = True
-        self.set_ui_enabled(False)
-        self.lbl_status.setText(self.i18n.t('status_connecting'))
-        self.lbl_status.setStyleSheet("color: #ffb86c;")
-        self.app.processEvents()
-
-        success, message = self.mounter.mount_sftp(data)
-
-        self.is_connecting = False
-        if success:
-            self.update_status_label()
-            self.setup_system_tray()
-            
-            self.tray_icon.showMessage(
-                "SFTP Drive Mounter",
-                self.i18n.t('connection_ok_msg', drive=data['drive_letter'].upper()),
-                QSystemTrayIcon.Information,
-                3000
-            )
-        else:
-            # Si el error indica que la unidad está en uso, mostramos mensaje localizado de net use
-            display_msg = message
-            if "already in use" in message or "ya está en uso" in message:
-                display_msg = self.i18n.t('net_use_in_use', drive=data['drive_letter'].upper())
-                
-            QMessageBox.critical(self, self.i18n.t('connection_fail_title'), display_msg)
-            self.update_status_label()
-
-    def on_disconnect_clicked(self):
-        """
-        Desmonta la unidad remota activa y restaura el estado.
-        """
-        drive = self.get_selected_drive_letter()
-        if not drive or drive not in self.mounter.active_mounts:
-            return
-
-        self.lbl_status.setText(self.i18n.t('status_unmounting'))
-        self.lbl_status.setStyleSheet("color: #ffb86c;")
-        self.btn_disconnect.setEnabled(False)
-        self.app.processEvents()
-
-        success = self.mounter.unmount_sftp(drive)
-
-        if success:
-            self.tray_icon.showMessage(
-                "SFTP Drive Mounter",
-                self.i18n.t('disconnection_ok_msg', drive=drive.upper()),
-                QSystemTrayIcon.Information,
-                2000
-            )
-            self.update_status_label()
-            self.populate_drive_letters()
-            self.setup_system_tray()
-        else:
-            QMessageBox.warning(self, self.i18n.t('unmount_warning_title'), self.i18n.t('unmount_warning_msg'))
-            self.update_status_label()
-
-    def set_ui_enabled(self, enabled):
-        """
-        Habilita o deshabilita los campos del formulario.
-        """
-        self.cmb_profiles.setEnabled(enabled)
-        self.btn_delete_profile.setEnabled(enabled and self.cmb_profiles.currentIndex() > 0)
-        self.txt_host.setEnabled(enabled)
-        self.txt_port.setEnabled(enabled)
-        self.txt_user.setEnabled(enabled)
-        self.cmb_auth_type.setEnabled(enabled)
-        self.txt_password.setEnabled(enabled)
-        self.txt_key_path.setEnabled(enabled)
-        self.btn_browse_key.setEnabled(enabled)
-        self.txt_remote_path.setEnabled(enabled)
-        self.cmb_drive_letter.setEnabled(enabled)
-        self.btn_save_profile.setEnabled(enabled)
-        self.menu_bar.setEnabled(enabled)
 
     # ----------------- SYSTEM TRAY MANAGEMENT (BANDEJA DE SISTEMA) -----------------
     def setup_system_tray(self):
@@ -1055,8 +1357,10 @@ class MainWindow(QWidget):
         drives = list(self.mounter.active_mounts.keys())
         for drive in drives:
             self.mounter.unmount_sftp(drive)
-        self.update_status_label()
-        self.populate_drive_letters()
+        if hasattr(self, 'profile_cards'):
+            for p_name in self.profile_cards.keys():
+                self.update_card_status(p_name)
+        self.setup_system_tray()
 
     def close_app(self):
         """
@@ -1272,18 +1576,18 @@ class MainWindow(QWidget):
             return
             
         profile = self.auto_mount_queue.pop(0)
-        logger.info(f"Auto-mounting profile: {profile.get('host')}")
+        logger.info(f"Auto-mounting profile for host: {profile.get('host')}")
         
-        # Buscar el perfil correspondiente por host y drive_letter
+        # Buscar el nombre del perfil
         profiles = self.config_manager.load_profiles()
+        target_name = None
         for name, p in profiles.items():
             if p.get('host') == profile.get('host') and p.get('drive_letter') == profile.get('drive_letter'):
-                idx = self.cmb_profiles.findText(name)
-                if idx >= 0:
-                    self.cmb_profiles.setCurrentIndex(idx)
-                    break
+                target_name = name
+                break
         
-        self.on_connect_clicked()
+        if target_name:
+            self.on_card_action_clicked(target_name)
         
         if self.auto_mount_queue:
             QTimer.singleShot(500, self.process_auto_mount_queue)

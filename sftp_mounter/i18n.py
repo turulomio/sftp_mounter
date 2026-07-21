@@ -232,6 +232,18 @@ TRANSLATIONS = {
         'hi': 'ऑटो-माउंट', 'zh': '自动挂载', 'ru': 'Автоподключение',
         'ro': 'Auto-conectare'
     },
+    'auto_mount_status': {
+        'es': 'Autoconectar: {status}', 'en': 'Auto-mount: {status}', 'fr': 'Connexion auto: {status}',
+        'pt': 'Autoconectar: {status}', 'de': 'Auto-Verbindung: {status}', 'it': 'Auto-connessione: {status}',
+        'hi': 'ऑटो-माउंट: {status}', 'zh': '自动挂载: {status}', 'ru': 'Автоподключение: {status}',
+        'ro': 'Auto-conectare: {status}'
+    },
+    'yes': {
+        'es': 'Sí', 'en': 'Yes', 'fr': 'Oui', 'pt': 'Sim', 'de': 'Ja', 'it': 'Sì', 'hi': 'हाँ', 'zh': '是', 'ru': 'Да', 'ro': 'Da'
+    },
+    'no': {
+        'es': 'No', 'en': 'No', 'fr': 'Non', 'pt': 'Não', 'de': 'Nein', 'it': 'No', 'hi': 'नहीं', 'zh': '否', 'ru': 'Нет', 'ro': 'Nu'
+    },
     'winfsp_missing_card': {
         'es': 'Falta el driver WinFsp necesario para montar unidades.', 'en': 'Missing WinFsp driver required to mount drives.',
         'fr': 'Pilote WinFsp manquant requis pour monter des lecteurs.', 'pt': 'Falta o driver WinFsp necesario para montar unidades.',
@@ -550,6 +562,54 @@ TRANSLATIONS = {
         'pt': 'Projeto: {url}', 'de': 'Projekt: {url}', 'it': 'Progetto: {url}',
         'hi': 'परियोजना: {url}', 'zh': '项目: {url}', 'ru': 'Проект: {url}',
         'ro': 'Proiect: {url}'
+    },
+    'manage_profiles': {
+        'es': 'Gestionar perfiles...', 'en': 'Manage profiles...', 'fr': 'Gérer les profils...',
+        'pt': 'Gerenciar perfis...', 'de': 'Profile verwalten...', 'it': 'Gestisci profili...',
+        'hi': 'प्रोफ़ाइल प्रबंधित करें...', 'zh': '管理配置文件...', 'ru': 'Управление профилями...',
+        'ro': 'Gestionare profiluri...'
+    },
+    'add_profile': {
+        'es': 'Añadir perfil', 'en': 'Add profile', 'fr': 'Ajouter un profil',
+        'pt': 'Adicionar perfil', 'de': 'Profil hinzufügen', 'it': 'Aggiungi profilo',
+        'hi': 'प्रोफ़ाइल जोड़ें', 'zh': '添加配置文件', 'ru': 'Добавить профиль',
+        'ro': 'Adaugă profil'
+    },
+    'edit_profile': {
+        'es': 'Editar perfil', 'en': 'Edit profile', 'fr': 'Modifier le profil',
+        'pt': 'Editar perfil', 'de': 'Profil bearbeiten', 'it': 'Modifica profilo',
+        'hi': 'प्रोफ़ाइल संपादित करें', 'zh': '编辑配置文件', 'ru': 'Редактировать профиль',
+        'ro': 'Editează profilul'
+    },
+    'save': {
+        'es': 'Guardar', 'en': 'Save', 'fr': 'Enregistrer',
+        'pt': 'Salvar', 'de': 'Speichern', 'it': 'Salva',
+        'hi': 'सहेजें', 'zh': '保存', 'ru': 'Сохранить',
+        'ro': 'Salvează'
+    },
+    'no_profiles': {
+        'es': 'No hay perfiles configurados.\nCrea uno en Opciones -> Gestionar perfiles...',
+        'en': 'No profiles configured.\nCreate one in Options -> Manage profiles...',
+        'fr': 'Aucun profil configuré.\nCréez-en un dans Options -> Gérer les profils...',
+        'pt': 'Nenhum perfil configurado.\nCrie um em Opções -> Gerenciar perfis...',
+        'de': 'Keine Profile konfiguriert.\nErstellen Sie eines unter Optionen -> Profile verwalten...',
+        'it': 'Nessun profilo configurato.\nCreane uno in Opzioni -> Gestisci profili...',
+        'hi': 'कोई प्रोफ़ाइल कॉन्फ़िगर नहीं की गई है।\nविकल्प -> प्रोफ़ाइल प्रबंधित करें में एक बनाएं...',
+        'zh': '未配置配置文件。\n请在 选项 -> 管理配置文件 中创建一个...',
+        'ru': 'Профили не настроены.\nСоздайте в Опции -> Управление профилями...',
+        'ro': 'Niciun profil configurat.\nCreați unul în Opțiuni -> Gestionare profiluri...'
+    },
+    'profile_active_warning': {
+        'es': 'No se puede editar o eliminar un perfil mientras esté montado o conectando.',
+        'en': 'Cannot edit or delete a profile while it is mounted or connecting.',
+        'fr': 'Impossible de modifier ou supprimer un profil lorsqu\'il est monté.',
+        'pt': 'Não é possível editar ou excluir um perfil enquanto estiver montado.',
+        'de': 'Ein Profil kann nicht bearbeitet oder gelöscht werden, während es gemountet ist.',
+        'it': 'Impossibile modificare o eliminare un profilo mentre è montato.',
+        'hi': 'माउंट या कनेक्ट होने के दौरान प्रोफ़ाइल को संपादित या हटाया नहीं जा सकता।',
+        'zh': '挂载或连接时无法编辑或删除配置文件。',
+        'ru': 'Нельзя редактировать или удалять подключенный профиль.',
+        'ro': 'Nu se poate edita sau șterge un profil în timp ce este montat.'
     }
 }
 
