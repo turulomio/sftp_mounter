@@ -382,28 +382,13 @@ class Mounter:
             
         return False
 
-    def mount_sftp(self, profile: dict) -> (bool, str):
+    def mount_sftp(self, profile: dict, accept_host_key: bool = False) -> (bool, str):
         """
         Monta un servidor SFTP remoto como si fuese un volumen local.
         
         Utiliza el binario de rclone con el comando `mount`. Para evitar archivos de configuración,
         pasa los parámetros de conexión dinámicamente mediante variables de entorno
         generadas en tiempo de ejecución.
-        
-        Parámetros clave de montaje en rclone:
-        - --vfs-cache-mode writes: Modo de caché indispensable que permite al Explorador de archivos
-          realizar operaciones de edición en caliente, guardado directo de documentos de Office y
-          escrituras aleatorias secuenciales.
-        - --vfs-cache-max-age 10s: Expira rápidamente los archivos en caché para ahorrar espacio.
-        - --volname: Asigna una etiqueta de nombre amigable visible en 'Este Equipo'.
-        - --network-mode: Muestra la unidad montada en la sección 'Ubicaciones de Red',
-          mejorando el rendimiento de respuesta y la integración con la shell del sistema.
-          
-        Args:
-            profile (dict): Diccionario de perfiles que contiene el host, puerto, credenciales, etc.
-            
-        Returns:
-            tuple (bool, str): (Estado de éxito del montaje, Mensaje informativo o descripción de error).
         """
         host = profile.get('host')
         port = profile.get('port', '22')
@@ -438,6 +423,10 @@ class Mounter:
         env[f"RCLONE_CONFIG_{remote_name.upper()}_HOST"] = host
         env[f"RCLONE_CONFIG_{remote_name.upper()}_PORT"] = str(port)
         env[f"RCLONE_CONFIG_{remote_name.upper()}_USER"] = user
+        
+        if accept_host_key:
+            # Si el usuario aceptó explícitamente la clave en el diálogo, forzamos skip host key check
+            env[f"RCLONE_CONFIG_{remote_name.upper()}_SKIP_HOST_KEY_CHECK"] = "true"
         
         # Procesar tipo de autenticación
         if auth_type == 'password':

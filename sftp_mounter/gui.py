@@ -946,6 +946,23 @@ class MainWindow(QWidget):
 
             success, message = self.mounter.mount_sftp(profile)
 
+            # Si falla debido a verificación de clave de host SSH (host key verification/unknown host)
+            is_host_key_error = any(term in message.lower() for term in [
+                "host key", "key verification", "hostkey", "host key fingerprint", "strictly host key checking"
+            ])
+
+            if not success and is_host_key_error:
+                reply = QMessageBox.question(
+                    self,
+                    self.i18n.t('host_key_unknown_title'),
+                    self.i18n.t('host_key_unknown_msg', host=profile.get('host', '')),
+                    QMessageBox.Yes | QMessageBox.No
+                )
+                if reply == QMessageBox.Yes:
+                    card['lbl_status'].setText(self.i18n.t('status_connecting'))
+                    self.app.processEvents()
+                    success, message = self.mounter.mount_sftp(profile, accept_host_key=True)
+
             if success:
                 self.tray_icon.showMessage(
                     "SFTP Drive Mounter",

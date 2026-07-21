@@ -610,6 +610,30 @@ TRANSLATIONS = {
         'zh': '挂载或连接时无法编辑或删除配置文件。',
         'ru': 'Нельзя редактировать или удалять подключенный профиль.',
         'ro': 'Nu se poate edita sau șterge un profil în timp ce este montat.'
+    },
+    'host_key_unknown_title': {
+        'es': 'Verificación de clave de host SSH',
+        'en': 'SSH Host Key Verification',
+        'fr': 'Vérification de la clé d\'hôte SSH',
+        'pt': 'Verificação da chave de host SSH',
+        'de': 'SSH-Hostschlüssel-Überprüfung',
+        'it': 'Verifica della chiave host SSH',
+        'hi': 'SSH होस्ट कुंजी सत्यापन',
+        'zh': 'SSH 主机密钥验证',
+        'ru': 'Проверка ключа узла SSH',
+        'ro': 'Verificarea cheii de host SSH'
+    },
+    'host_key_unknown_msg': {
+        'es': 'La autenticidad del servidor SSH \'{host}\' no ha sido verificada o ha cambiado la clave de host.\n\n¿Deseas confiar en este servidor y aceptar su clave para guardarla en known_hosts?',
+        'en': 'The authenticity of SSH host \'{host}\' can\'t be established or the host key has changed.\n\nDo you want to trust this server and accept its host key?',
+        'fr': 'L\'authenticité de l\'hôte SSH \'{host}\' ne peut pas être établie.\n\nVoulez-vous faire confiance à ce serveur et accepter sa clé d\'hôte ?',
+        'pt': 'A autenticidade do host SSH \'{host}\' não pôde ser verificada.\n\nDeseja confiar neste servidor e aceitar sua chave?',
+        'de': 'Die Authentizität des SSH-Hosts \'{host}\' kann nicht bestätigt werden.\n\nMöchten Sie diesem Server vertrauen und seinen Schlüssel akzeptieren?',
+        'it': 'L\'autenticità dell\'host SSH \'{host}\' non può essere verificata.\n\nVuoi fidarti di questo server e accettare la sua chiave?',
+        'hi': 'SSH होस्ट \'{host}\' की प्रामाणिकता स्थापित नहीं की जा सकती।\n\nक्या आप इस सर्वर पर भरोसा करना चाहते हैं?',
+        'zh': '无法确认 SSH 主机 \'{host}\' 的真实性。\n\n您要信任此服务器并接受其主机密钥吗？',
+        'ru': 'Не удалось подтвердить подлинность узла SSH \'{host}\'.\n\nВы хотите доверять этому серверу и принять его ключ?',
+        'ro': 'Autenticitatea host-ului SSH \'{host}\' nu poate fi stabilită.\n\nDoriți să aveți încredere în acest server și să-i acceptați cheia?'
     }
 }
 
