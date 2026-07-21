@@ -40,9 +40,11 @@
   <rect width="512" height="512" rx="96" fill="url(#bgGrad)" stroke="#2d2d42" stroke-width="6" />
 
   <g filter="url(#dropShadow)">
-    <!-- Stylized Cloud / Network (SFTP) -->
-    <path d="M180,280 C130,280 100,240 100,190 C100,135 145,95 200,95 C220,95 245,102 260,115 C280,80 320,60 360,60 C420,60 470,110 470,170 C470,225 430,280 370,280 Z" 
-          fill="none" stroke="url(#purpleGrad)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+    <!-- Stylized Cloud / Network (SFTP) - Centrado aplicando un desplazamiento de -29px en X -->
+    <g transform="translate(-29, 0)">
+      <path d="M180,280 C130,280 100,240 100,190 C100,135 145,95 200,95 C220,95 245,102 260,115 C280,80 320,60 360,60 C420,60 470,110 470,170 C470,225 430,280 370,280 Z" 
+            fill="none" stroke="url(#purpleGrad)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+    </g>
 
     <!-- Local Hard Drive Bracket / Mounting Target -->
     <path d="M120,380 L120,430 C120,446 134,460 150,460 L362,460 C378,460 392,446 392,430 L392,340 C392,324 378,310 362,310 L260,310 L230,280 L150,280 C134,280 120,294 120,310 Z" 

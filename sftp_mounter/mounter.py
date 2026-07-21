@@ -237,6 +237,19 @@ class Mounter:
         except Exception as e:
             logger.error(f"Registry check (Uninstall) failed: {e}")
 
+        # Estrategia 6: Buscar carpetas que contengan 'winfsp' en la variable de entorno PATH
+        try:
+            path_env = os.environ.get('PATH', '')
+            for folder in path_env.split(os.path.pathsep):
+                if folder and 'winfsp' in folder.lower():
+                    if os.path.exists(os.path.join(folder, 'launcherd.exe')):
+                        return True
+                    parent_dir = os.path.dirname(folder)
+                    if os.path.exists(os.path.join(parent_dir, 'bin', 'launcherd.exe')):
+                        return True
+        except Exception as e:
+            logger.error(f"PATH environment search failed: {e}")
+
         return False
 
 
@@ -394,7 +407,7 @@ class Mounter:
             return False, "El ejecutable rclone no está disponible."
 
         if not self.is_winfsp_installed():
-            return False, "WinFsp no está instalado en el sistema."
+            logger.warning("WinFsp no se detecta en el sistema. Se continuará con el intento de montaje.")
 
         # Identificador del remoto dinámico
         remote_name = "sftpmount"

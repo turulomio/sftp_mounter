@@ -146,6 +146,25 @@ def setup_binaries():
     if os.name != 'nt' and os.path.exists(rclone_path):
         os.chmod(rclone_path, 0o755)
 
+def get_project_version() -> str:
+    """
+    Recupera de forma dinámica la versión del proyecto definida en el archivo pyproject.toml.
+    Si ocurre algún error en la lectura, retorna la versión de respaldo por defecto '1.0.0'.
+    """
+    try:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        toml_path = os.path.join(project_root, 'pyproject.toml')
+        if os.path.exists(toml_path):
+            with open(toml_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip().startswith('version ='):
+                        parts = line.split('=')
+                        if len(parts) >= 2:
+                            return parts[1].strip().strip('"').strip("'")
+    except Exception:
+        pass
+    return "1.0.0"
+
 def run_packaging():
     """
     Ejecuta el empaquetado final a través de PyInstaller utilizando subprocesos.
@@ -157,7 +176,7 @@ def run_packaging():
     - --onefile: Compila y unifica todo el programa en un único binario portable autoextraíble.
     - --noconsole: Deshabilita la consola de comandos de fondo (cmd.exe) en Windows al arrancar,
       haciendo que solo se visualice la interfaz de usuario GUI de PySide6 de forma limpia.
-    - --name: Nombre que tendrá el binario final generado.
+    - --name: Nombre que tendrá el binario final generado (ej. SFTPMounter-v1.0.0).
     - --add-data: Inyecta la carpeta local 'build/bin' con los binarios de soporte descargados 
       dentro del volumen interno virtual de PyInstaller, exponiéndolos bajo el subdirectorio 'bin'.
     - --distpath / --workpath / --specpath: Rutas personalizadas para organizar los directorios de salida.
@@ -167,6 +186,11 @@ def run_packaging():
     # Mover el contexto de ejecución al directorio raíz del proyecto para resolver rutas relativas
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(project_root)
+
+    # Obtener versión para el nombre del archivo de salida
+    version = get_project_version()
+    exe_name = f"SFTPMounter-v{version}"
+    print(f"Versión detectada: {version} -> Nombre de salida: {exe_name}")
 
     # Verificar presencia de PyInstaller e instalar automáticamente si es necesario
     try:
@@ -182,7 +206,7 @@ def run_packaging():
         "pyinstaller",
         "--onefile",
         "--noconsole",
-        "--name", "SFTPMounter",
+        "--name", exe_name,
         "--icon=sftp_mounter/logo.ico",
         f"--add-data=build/bin{separator}bin",
         "--distpath", "dist",

@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['sftp_mounter/main.py'],
+    ['sftp_mounter\\main.py'],
     pathex=[],
     binaries=[],
     datas=[('build/bin', 'bin')],
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['sftp_mounter/logo.ico'],
+    icon=['sftp_mounter\\logo.ico'],
 )

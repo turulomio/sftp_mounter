@@ -223,8 +223,8 @@ class MainWindow(QWidget):
         Configura los marcos de perfil, credenciales, letras de unidad y botones de acción.
         """
         self.setObjectName("mainWidget")
-        self.setMinimumSize(500, 700)
-        self.resize(500, 700)
+        self.setMinimumSize(560, 840)
+        self.resize(560, 840)
         self.setStyleSheet(QSS_STYLE)
 
         # Main Layout
@@ -282,7 +282,7 @@ class MainWindow(QWidget):
         self.lbl_host = QLabel()
         config_layout.addWidget(self.lbl_host, 0, 0)
         self.txt_host = QLineEdit()
-        config_layout.addWidget(self.txt_host, 0, 1, 1, 2)
+        config_layout.addWidget(self.txt_host, 0, 1)
 
         # Port
         self.lbl_port = QLabel()
@@ -295,7 +295,7 @@ class MainWindow(QWidget):
         self.lbl_user = QLabel()
         config_layout.addWidget(self.lbl_user, 2, 0)
         self.txt_user = QLineEdit()
-        config_layout.addWidget(self.txt_user, 2, 1, 1, 2)
+        config_layout.addWidget(self.txt_user, 2, 1)
 
         # Auth Type
         self.lbl_auth = QLabel()
@@ -303,14 +303,14 @@ class MainWindow(QWidget):
         self.cmb_auth_type = QComboBox()
         self.cmb_auth_type.addItems(["", "", ""])
         self.cmb_auth_type.currentIndexChanged.connect(self.on_auth_type_changed)
-        config_layout.addWidget(self.cmb_auth_type, 3, 1, 1, 2)
+        config_layout.addWidget(self.cmb_auth_type, 3, 1)
 
         # Password (Row 4)
         self.lbl_password = QLabel()
         config_layout.addWidget(self.lbl_password, 4, 0)
         self.txt_password = QLineEdit()
         self.txt_password.setEchoMode(QLineEdit.Password)
-        config_layout.addWidget(self.txt_password, 4, 1, 1, 2)
+        config_layout.addWidget(self.txt_password, 4, 1)
 
         # Private Key Path (Row 5 - Hidden by default)
         self.lbl_key_path = QLabel()
@@ -323,7 +323,7 @@ class MainWindow(QWidget):
 
         self.btn_browse_key = QPushButton()
         self.btn_browse_key.setObjectName("btnSecondary")
-        self.btn_browse_key.setFixedWidth(90)
+        self.btn_browse_key.setFixedWidth(95)
         self.btn_browse_key.setVisible(False)
         self.btn_browse_key.clicked.connect(self.on_browse_key_clicked)
         config_layout.addWidget(self.btn_browse_key, 5, 2)
@@ -332,7 +332,7 @@ class MainWindow(QWidget):
         self.lbl_remote_path = QLabel()
         config_layout.addWidget(self.lbl_remote_path, 6, 0)
         self.txt_remote_path = QLineEdit()
-        config_layout.addWidget(self.txt_remote_path, 6, 1, 1, 2)
+        config_layout.addWidget(self.txt_remote_path, 6, 1)
 
         main_layout.addWidget(config_frame)
 
@@ -534,14 +534,14 @@ class MainWindow(QWidget):
             self.lbl_status.setText(self.i18n.t('status_disconnected'))
             self.lbl_status.setStyleSheet("color: #8b8b9c;")
             self.btn_disconnect.setEnabled(False)
-            self.btn_connect.setEnabled(self.mounter.is_winfsp_installed())
+            self.btn_connect.setEnabled(True) # Permitir siempre conectar (no-bloqueante)
 
     def check_winfsp_status(self):
         """
         Verifica el estado del controlador WinFsp en el sistema y actualiza los componentes visuales.
         
-        Si no se detecta el controlador en Windows, deshabilita el botón de conexión y
-        muestra una tarjeta informativa con la opción de instalar el driver.
+        Si no se detecta el controlador en Windows, muestra una tarjeta informativa
+        con la opción de instalar el driver, pero mantiene habilitada la opción de conectar.
         """
         installed = self.mounter.is_winfsp_installed()
         if installed:
@@ -554,7 +554,8 @@ class MainWindow(QWidget):
             self.lbl_winfsp_warning.setText(self.i18n.t('winfsp_not_installed'))
             self.lbl_winfsp_warning.setStyleSheet("color: #ff5555; font-size: 11px;")
             self.winfsp_card.setVisible(True)
-            self.btn_connect.setEnabled(False)
+            if not self.is_connecting and not self.current_mounted_drive:
+                self.btn_connect.setEnabled(True) # Mantener habilitado (no-bloqueante)
 
     def populate_drive_letters(self):
         """
