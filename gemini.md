@@ -59,11 +59,13 @@ Para evitar el crecimiento indefinido del archivo de registros y mantener las se
 
 ---
 
-## 7. Eliminación Completa de la Gestión de known_hosts y validación SSH
+## 7. Gestión Híbrida de known_hosts y Validación SSH Segura
 
-Se ha eliminado por completo toda la lógica de gestión del archivo `known_hosts` y de directorios `.ssh` en el código de la aplicación.
-* **Comportamiento por Defecto de Rclone**: Dado que Rclone por defecto no realiza validación de claves de host (a menos que se le defina un archivo de configuración `known_hosts`), al omitir estas variables de entorno en el arranque del montaje, Rclone conecta directamente sin necesidad de comprobar o gestionar ficheros SSH locales.
-* **Eliminación de la Interfaz**: Se removió el visor de `known_hosts` de la interfaz gráfica y los diálogos de confirmación/reintento, simplificando significativamente el flujo y evitando errores por falta de permisos de escritura en la carpeta de usuario en entornos Windows restrictivos.
+Se ha reimplementado la lógica de validación de host key del servidor SSH de forma robusta e interactiva:
+* **Uso del Path Estándar**: La validación se realiza contra el archivo estándar del sistema `~/.ssh/known_hosts` (el cual se visualiza recuperando la opción "Ver known_hosts" en el menú de la aplicación).
+* **Escaneo y Escritura Automatizada**: Al conectar a un nuevo servidor cuya clave no esté registrada, se solicita confirmación al usuario. Si acepta, la aplicación ejecuta `ssh-keyscan` para recuperar e inyectar la clave en el archivo `known_hosts` de manera programática.
+* **Tolerancia a Fallos y Modo Bypaseado**: Si el escaneo falla o el archivo de hosts del usuario no tiene permisos de escritura (p. ej. en perfiles Windows restrictivos), el sistema aplica un fallback de contingencia seguro: conecta omitiendo la validación para esa sesión (bypaseando la clave), garantizando así que el montaje final se realice sin interrupciones ni bloqueos de acceso.
+
 
 
 ---

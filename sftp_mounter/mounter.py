@@ -50,6 +50,19 @@ class Mounter:
 
         self.rclone_exe = os.path.join(self.bin_dir, 'rclone.exe')
         self.winfsp_msi = os.path.join(self.bin_dir, 'winfsp.msi')
+        self.known_hosts_file = os.path.expanduser('~/.ssh/known_hosts')
+
+        # Asegurar de manera silenciosa que el directorio .ssh del usuario existe y crear el fichero en blanco
+        try:
+            ssh_dir = os.path.dirname(self.known_hosts_file)
+            os.makedirs(ssh_dir, exist_ok=True)
+            if not os.path.exists(self.known_hosts_file):
+                with open(self.known_hosts_file, 'w', encoding='utf-8') as f:
+                    pass
+        except Exception as e:
+            logger.warning(f"Failed to create known_hosts file: {e}")
+
+
 
 
 
@@ -373,7 +386,7 @@ class Mounter:
             
         return False
 
-    def mount_sftp(self, profile: dict) -> (bool, str):
+    def mount_sftp(self, profile: dict, accept_host_key: bool = False) -> (bool, str):
         """
         Monta un servidor SFTP remoto como si fuese un volumen local.
         
@@ -410,6 +423,10 @@ class Mounter:
         env[f"RCLONE_CONFIG_{remote_name.upper()}_HOST"] = host
         env[f"RCLONE_CONFIG_{remote_name.upper()}_PORT"] = str(port)
         env[f"RCLONE_CONFIG_{remote_name.upper()}_USER"] = user
+        if not accept_host_key:
+            env[f"RCLONE_CONFIG_{remote_name.upper()}_KNOWN_HOSTS_FILE"] = self.known_hosts_file
+            env["RCLONE_SFTP_KNOWN_HOSTS_FILE"] = self.known_hosts_file
+
 
 
         
@@ -674,6 +691,36 @@ class Mounter:
         except Exception:
             pass
         return False
+
+    def add_to_known_hosts(self, host: str, port: int) -> bool:
+        """
+        Intenta recuperar y añadir la clave de host al archivo known_hosts estándar utilizando ssh-keyscan.
+        """
+        try:
+            # Asegurar la existencia del directorio padre
+            os.makedirs(os.path.dirname(self.known_hosts_file), exist_ok=True)
+            
+            startupinfo = None
+            if os.name == 'nt':
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+            cmd = ["ssh-keyscan", "-p", str(port), host]
+            logger.info(f"Running command: {' '.join(cmd)}")
+            
+            res = subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo)
+            if res.returncode == 0 and res.stdout.strip():
+                # Escribir la clave al archivo known_hosts
+                with open(self.known_hosts_file, 'a', encoding='utf-8') as f:
+                    f.write(res.stdout)
+                logger.info(f"Added host key for {host}:{port} to known_hosts: {self.known_hosts_file}")
+                return True
+            else:
+                logger.warning(f"ssh-keyscan failed or returned empty output: {res.stderr}")
+        except Exception as e:
+            logger.error(f"Failed to add to known_hosts: {e}")
+        return False
+
 
 
 
