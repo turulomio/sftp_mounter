@@ -45,6 +45,18 @@ def setup_logging():
     """
     # Determinar el directorio de logs (Windows)
     log_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'SFTPMounter')
+    
+    # Intentar asegurar la existencia de la ruta del directorio
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+    except Exception as e:
+        sys.stderr.write(f"Warning: Could not create AppData log directory, falling back to temp: {e}\n")
+        import tempfile
+        log_dir = os.path.join(tempfile.gettempdir(), 'SFTPMounter')
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+        except Exception:
+            pass
         
     # Borrar logs antiguos antes de inicializar la configuración de logging
     try:
@@ -57,17 +69,20 @@ def setup_logging():
     except Exception as e:
         sys.stderr.write(f"Warning: Could not delete old log files: {e}\n")
 
-    os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, 'app.log')
 
     # Configuración básica de logging
+    try:
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        handlers = [file_handler, logging.StreamHandler(sys.stdout)]
+    except Exception as e:
+        sys.stderr.write(f"Warning: Could not create log file handler (perhaps locked or read-only): {e}\n")
+        handlers = [logging.StreamHandler(sys.stdout)]
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-        handlers=[
-            logging.FileHandler(log_file, encoding='utf-8'),
-            logging.StreamHandler(sys.stdout)
-        ]
+        handlers=handlers
     )
     logging.info("Application started.")
 

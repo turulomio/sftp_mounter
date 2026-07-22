@@ -79,9 +79,8 @@ class ConfigManager:
         """
         # Windows: %APPDATA%/SFTPMounter
         self.config_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'SFTPMounter')
-            
-        self.config_file = os.path.join(self.config_dir, 'profiles.json')
         self._ensure_config_dir()
+        self.config_file = os.path.join(self.config_dir, 'profiles.json')
 
     def _ensure_config_dir(self):
         """
@@ -90,7 +89,14 @@ class ConfigManager:
         try:
             os.makedirs(self.config_dir, exist_ok=True)
         except Exception as e:
-            logger.error(f"Failed to create configuration directory: {e}")
+            logger.warning(f"Failed to create configuration directory in AppData, falling back to temp: {e}")
+            import tempfile
+            self.config_dir = os.path.join(tempfile.gettempdir(), 'SFTPMounter')
+            try:
+                os.makedirs(self.config_dir, exist_ok=True)
+            except Exception:
+                pass
+
 
     def _read_raw(self):
         """

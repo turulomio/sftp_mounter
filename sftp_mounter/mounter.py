@@ -38,22 +38,20 @@ class Mounter:
 
         # Directorio local donde se guardarán los binarios rclone y winfsp.msi
         self.bin_dir = os.path.join(self.app_dir, 'bin')
-        os.makedirs(self.bin_dir, exist_ok=True)
+        
+        try:
+            os.makedirs(self.bin_dir, exist_ok=True)
+        except Exception as e:
+            logger.warning(f"Failed to create bin dir in AppData, falling back to temp: {e}")
+            import tempfile
+            self.app_dir = os.path.join(tempfile.gettempdir(), 'SFTPMounter')
+            self.bin_dir = os.path.join(self.app_dir, 'bin')
+            os.makedirs(self.bin_dir, exist_ok=True)
 
-        # Rutas absolutas a los ejecutables
         self.rclone_exe = os.path.join(self.bin_dir, 'rclone.exe')
         self.winfsp_msi = os.path.join(self.bin_dir, 'winfsp.msi')
-        self.known_hosts_file = os.path.expanduser('~/.ssh/known_hosts')
 
-        # Asegurar que el directorio .ssh y el archivo known_hosts existan para evitar que rclone falle al abrirlo
-        try:
-            ssh_dir = os.path.dirname(self.known_hosts_file)
-            os.makedirs(ssh_dir, exist_ok=True)
-            if not os.path.exists(self.known_hosts_file):
-                with open(self.known_hosts_file, 'a', encoding='utf-8') as f:
-                    pass
-        except Exception as e:
-            logger.error(f"Failed to ensure known_hosts file exists: {e}")
+
 
 
         # Registro en memoria de montajes actualmente activos: {drive_letter: subprocess.Popen}
@@ -375,7 +373,7 @@ class Mounter:
             
         return False
 
-    def mount_sftp(self, profile: dict, accept_host_key: bool = False) -> (bool, str):
+    def mount_sftp(self, profile: dict) -> (bool, str):
         """
         Monta un servidor SFTP remoto como si fuese un volumen local.
         
@@ -412,9 +410,7 @@ class Mounter:
         env[f"RCLONE_CONFIG_{remote_name.upper()}_HOST"] = host
         env[f"RCLONE_CONFIG_{remote_name.upper()}_PORT"] = str(port)
         env[f"RCLONE_CONFIG_{remote_name.upper()}_USER"] = user
-        if not accept_host_key:
-            env[f"RCLONE_CONFIG_{remote_name.upper()}_KNOWN_HOSTS_FILE"] = self.known_hosts_file
-            env["RCLONE_SFTP_KNOWN_HOSTS_FILE"] = self.known_hosts_file
+
 
         
         # Procesar tipo de autenticación

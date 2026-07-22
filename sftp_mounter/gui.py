@@ -367,66 +367,6 @@ class LogViewerDialog(QDialog):
         event.accept()
 
 
-class KnownHostsViewerDialog(QDialog):
-    """
-    Ventana independiente no modal para visualizar el archivo SSH known_hosts.
-    """
-    def __init__(self, parent=None, i18n=None):
-        super().__init__(parent)
-        self.i18n = i18n
-        self.known_hosts_path = parent.mounter.known_hosts_file
-        
-        self.setWindowTitle(self.i18n.t('known_hosts_title'))
-        self.setMinimumSize(600, 400)
-        self.setStyleSheet(QSS_STYLE)
-        
-        # Configure non-modal window flags
-        self.setWindowFlags(Qt.Window | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
-        self.setModal(False)
-        
-        self.init_ui()
-        self.load_content()
-
-    def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
-        
-        # Path label
-        self.lbl_path = QLabel(f"Path: {self.known_hosts_path}", self)
-        self.lbl_path.setStyleSheet("color: #8b8b9c; font-size: 11px;")
-        layout.addWidget(self.lbl_path)
-        
-        # Read-only plain text edit
-        self.txt_content = QPlainTextEdit(self)
-        self.txt_content.setReadOnly(True)
-        self.txt_content.setStyleSheet("background-color: #141419; color: #a9a9b3; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; border: 1px solid #333;")
-        layout.addWidget(self.txt_content)
-        
-        # Button layout
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
-        
-        self.btn_close = QPushButton(self.i18n.t('btn_close'), self)
-        self.btn_close.clicked.connect(self.close)
-        self.btn_close.setStyleSheet("background-color: #444; min-width: 100px; padding: 8px;")
-        btn_layout.addWidget(self.btn_close)
-        
-        layout.addLayout(btn_layout)
-
-    def load_content(self):
-        if not os.path.exists(self.known_hosts_path):
-            self.txt_content.setPlainText(self.i18n.t('known_hosts_not_found'))
-            return
-            
-        try:
-            with open(self.known_hosts_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.txt_content.setPlainText(content if content.strip() else self.i18n.t('known_hosts_not_found'))
-        except Exception as e:
-            self.txt_content.setPlainText(f"Error al leer known_hosts: {e}")
-
-
 class ProfileManagerDialog(QDialog):
     """
     Diálogo para crear, editar y eliminar perfiles SFTP de manera dedicada.
@@ -836,7 +776,6 @@ class MainWindow(QWidget):
         self.is_connecting = False         # Flag para bloquear re-intentos de conexión
         self.log_viewer = None
         self.log_path = os.path.join(self.mounter.app_dir, 'mounts.log')
-        self.known_hosts_viewer = None
 
         self.init_ui()
         self.load_global_settings()
@@ -873,11 +812,6 @@ class MainWindow(QWidget):
         self.act_view_log = QAction(self)
         self.act_view_log.triggered.connect(self.on_open_log_viewer)
         self.menu_options.addAction(self.act_view_log)
-
-        # Ver known_hosts
-        self.act_view_known_hosts = QAction(self)
-        self.act_view_known_hosts.triggered.connect(self.on_open_known_hosts_viewer)
-        self.menu_options.addAction(self.act_view_known_hosts)
 
         self.menu_options.addSeparator()
 
@@ -1140,26 +1074,6 @@ class MainWindow(QWidget):
             self.log_action(profile_name, f"Iniciando conexión/montaje en {drive.upper()}")
             success, message = self.mounter.mount_sftp(profile)
 
-            # Si falla debido a verificación de clave de host SSH (host key verification/unknown host)
-            is_host_key_error = any(term in message.lower() for term in [
-                "host key", "key verification", "hostkey", "host key fingerprint", "strictly host key checking", "knownhosts", "key is unknown"
-            ]) and "no host key validation is being performed" not in message.lower()
-
-
-            if not success and is_host_key_error:
-                self.log_action(profile_name, f"Fallo por clave de host desconocida. Solicitando confirmación al usuario.")
-                reply = QMessageBox.question(
-                    self,
-                    self.i18n.t('host_key_unknown_title'),
-                    self.i18n.t('host_key_unknown_msg', host=profile.get('host', '')),
-                    QMessageBox.Yes | QMessageBox.No
-                )
-                if reply == QMessageBox.Yes:
-                    self.log_action(profile_name, f"Usuario aceptó la clave de host. Reintentando montaje en {drive.upper()}")
-                    card['lbl_status'].setText(self.i18n.t('status_connecting'))
-                    self.app.processEvents()
-                    success, message = self.mounter.mount_sftp(profile, accept_host_key=True)
-
             if success:
                 self.log_action(profile_name, f"Montaje en {drive.upper()} completado y verificado con éxito")
                 self.tray_icon.showMessage(
@@ -1217,16 +1131,7 @@ class MainWindow(QWidget):
             self.log_viewer.activateWindow()
             self.log_viewer.raise_()
 
-    def on_open_known_hosts_viewer(self):
-        """
-        Abre la ventana independiente no modal del visor de known_hosts.
-        """
-        if self.known_hosts_viewer is None or not self.known_hosts_viewer.isVisible():
-            self.known_hosts_viewer = KnownHostsViewerDialog(parent=self, i18n=self.i18n)
-            self.known_hosts_viewer.show()
-        else:
-            self.known_hosts_viewer.activateWindow()
-            self.known_hosts_viewer.raise_()
+
 
     def log_action(self, profile_name: str, message: str):
         """
@@ -1252,7 +1157,6 @@ class MainWindow(QWidget):
         self.menu_options.setTitle(self.i18n.t('menu_options'))
         self.act_manage_profiles.setText(self.i18n.t('manage_profiles'))
         self.act_view_log.setText(self.i18n.t('menu_view_log'))
-        self.act_view_known_hosts.setText(self.i18n.t('menu_view_known_hosts'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
         self.act_start_with_win.setText(self.i18n.t('start_with_win'))
         self.act_minimize_to_tray.setText(self.i18n.t('minimize_to_tray'))

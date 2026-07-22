@@ -59,12 +59,12 @@ Para evitar el crecimiento indefinido del archivo de registros y mantener las se
 
 ---
 
-## 7. Gestión de known_hosts por Rclone Estándar
+## 7. Eliminación Completa de la Gestión de known_hosts y validación SSH
 
-Se eliminó la gestión manual del archivo `known_hosts` realizada por la aplicación a favor del comportamiento estándar del sistema y Rclone:
-* **Uso del Path Estándar del Sistema**: Se modificó `known_hosts_file` en [mounter.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/mounter.py) para que apunte a `~/.ssh/known_hosts` (el directorio por defecto de OpenSSH en el sistema del usuario).
-* **Eliminación de ssh-keyscan**: Se eliminó por completo el método `add_to_known_hosts` que utilizaba el comando externo `ssh-keyscan` para recuperar e inyectar llaves.
-* **Manejo de Claves Desconocidas**: Al intentar conectar a un servidor con una clave de host no registrada, rclone fallará de manera estándar. El programa captura este fallo de verificación y le pregunta al usuario si desea continuar y aceptar la conexión. Si el usuario decide continuar, se monta omitiendo la verificación (`SKIP_HOST_KEY_CHECK = true`) para esa sesión, delegando a Rclone y al comportamiento del sistema el control y la visualización de los hosts conocidos.
+Se ha eliminado por completo toda la lógica de gestión del archivo `known_hosts` y de directorios `.ssh` en el código de la aplicación.
+* **Comportamiento por Defecto de Rclone**: Dado que Rclone por defecto no realiza validación de claves de host (a menos que se le defina un archivo de configuración `known_hosts`), al omitir estas variables de entorno en el arranque del montaje, Rclone conecta directamente sin necesidad de comprobar o gestionar ficheros SSH locales.
+* **Eliminación de la Interfaz**: Se removió el visor de `known_hosts` de la interfaz gráfica y los diálogos de confirmación/reintento, simplificando significativamente el flujo y evitando errores por falta de permisos de escritura en la carpeta de usuario en entornos Windows restrictivos.
+
 
 ---
 
