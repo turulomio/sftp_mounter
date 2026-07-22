@@ -48,3 +48,22 @@ El ejecutable compilado estará disponible en la carpeta raíz en `dist/SFTPMoun
 
 > [!IMPORTANT]
 > **Compatibilidad de Sistema**: Esta aplicación ha sido rediseñada para ser **exclusivamente compatible con sistemas operativos Windows** (Windows 10/11). Se ha eliminado el soporte y el código relativo a sistemas Linux/macOS, puesto que las dependencias de montaje (`WinFsp`) y el control del sistema de archivos están orientados al entorno de red de Windows.
+
+
+
+# RUTA DE ARCHIVOS EN WINDOWS 11
+
+## Logs
+C:\Users\antigravity\AppData\Roaming\SFTPMounter\app.log
+
+## Configuración
+C:\Users\antigravity\AppData\Roaming\SFTPMounter\config.json
+
+## Binarios
+C:\Users\antigravity\AppData\Roaming\SFTPMounter\bin\rclone.exe
+C:\Users\antigravity\AppData\Roaming\SFTPMounter\bin\winfsp.msi
+
+## SSH known_hosts
+C:\Users\antigravity\.ssh\known_hosts
+
+Actualmente no se almacena nada en known_hosts, Rclone no lo hace. Se emula haciendo una conexión a la ip y al puerto con herramientas como putty, ssh ... (PENDIENTE DE DESARROLLO)
