@@ -308,6 +308,11 @@ class LogViewerDialog(QDialog):
         self.btn_clear.clicked.connect(self.clear_log)
         self.btn_clear.setStyleSheet("background-color: #55252b; min-width: 100px; padding: 8px;")
         btn_layout.addWidget(self.btn_clear)
+
+        self.btn_copy = QPushButton(self.i18n.t('btn_copy_log'), self)
+        self.btn_copy.clicked.connect(self.copy_log)
+        self.btn_copy.setStyleSheet("background-color: #3b394c; min-width: 100px; padding: 8px;")
+        btn_layout.addWidget(self.btn_copy)
         
         btn_layout.addStretch()
         
@@ -349,10 +354,77 @@ class LogViewerDialog(QDialog):
             QMessageBox.information(self, self.i18n.t('log_viewer_title'), self.i18n.t('log_cleared_msg'))
         except Exception as e:
             QMessageBox.critical(self, self.i18n.t('log_viewer_title'), f"Error al limpiar logs: {e}")
-            
+
+    def copy_log(self):
+        from PySide6.QtWidgets import QApplication
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.txt_log.toPlainText())
+        QMessageBox.information(self, self.i18n.t('log_viewer_title'), self.i18n.t('log_copied_msg'))
+
+
     def closeEvent(self, event):
         self.timer.stop()
         event.accept()
+
+
+class KnownHostsViewerDialog(QDialog):
+    """
+    Ventana independiente no modal para visualizar el archivo SSH known_hosts.
+    """
+    def __init__(self, parent=None, i18n=None):
+        super().__init__(parent)
+        self.i18n = i18n
+        self.known_hosts_path = parent.mounter.known_hosts_file
+        
+        self.setWindowTitle(self.i18n.t('known_hosts_title'))
+        self.setMinimumSize(600, 400)
+        self.setStyleSheet(QSS_STYLE)
+        
+        # Configure non-modal window flags
+        self.setWindowFlags(Qt.Window | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
+        self.setModal(False)
+        
+        self.init_ui()
+        self.load_content()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(10)
+        
+        # Path label
+        self.lbl_path = QLabel(f"Path: {self.known_hosts_path}", self)
+        self.lbl_path.setStyleSheet("color: #8b8b9c; font-size: 11px;")
+        layout.addWidget(self.lbl_path)
+        
+        # Read-only plain text edit
+        self.txt_content = QPlainTextEdit(self)
+        self.txt_content.setReadOnly(True)
+        self.txt_content.setStyleSheet("background-color: #141419; color: #a9a9b3; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; border: 1px solid #333;")
+        layout.addWidget(self.txt_content)
+        
+        # Button layout
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        
+        self.btn_close = QPushButton(self.i18n.t('btn_close'), self)
+        self.btn_close.clicked.connect(self.close)
+        self.btn_close.setStyleSheet("background-color: #444; min-width: 100px; padding: 8px;")
+        btn_layout.addWidget(self.btn_close)
+        
+        layout.addLayout(btn_layout)
+
+    def load_content(self):
+        if not os.path.exists(self.known_hosts_path):
+            self.txt_content.setPlainText(self.i18n.t('known_hosts_not_found'))
+            return
+            
+        try:
+            with open(self.known_hosts_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.txt_content.setPlainText(content if content.strip() else self.i18n.t('known_hosts_not_found'))
+        except Exception as e:
+            self.txt_content.setPlainText(f"Error al leer known_hosts: {e}")
 
 
 class ProfileManagerDialog(QDialog):
@@ -360,12 +432,13 @@ class ProfileManagerDialog(QDialog):
     Diálogo para crear, editar y eliminar perfiles SFTP de manera dedicada.
     Presenta una lista de perfiles a la izquierda y el formulario de edición a la derecha.
     """
-    def __init__(self, parent=None, config_manager=None, i18n=None, active_mounts=None):
+    def __init__(self, parent=None, config_manager=None, i18n=None, active_mounts=None, initial_profile=None):
         super().__init__(parent)
         self.config_manager = config_manager
         self.i18n = i18n
         self.active_mounts = active_mounts or {}
         self.current_editing_profile = None
+        self.initial_profile = initial_profile
 
         self.setWindowTitle(self.i18n.t('manage_profiles'))
         self.setMinimumSize(720, 520)
@@ -526,13 +599,9 @@ class ProfileManagerDialog(QDialog):
 
     def populate_drive_letters(self):
         self.cmb_drive_letter.clear()
-        if os.name == 'nt':
-            for char in range(ord('Z'), ord('C'), -1):
-                letter = f"{chr(char)}:"
-                self.cmb_drive_letter.addItem(letter)
-        else:
-            self.cmb_drive_letter.addItem(os.path.expanduser("~/mnt/sftp_drive"))
-            self.cmb_drive_letter.addItem(os.path.expanduser("~/mnt/sftp_test"))
+        for char in range(ord('Z'), ord('C'), -1):
+            letter = f"{chr(char)}:"
+            self.cmb_drive_letter.addItem(letter)
 
     def load_profile_list(self):
         self.lst_profiles.blockSignals(True)
@@ -544,7 +613,14 @@ class ProfileManagerDialog(QDialog):
         self.lst_profiles.blockSignals(False)
 
         if self.lst_profiles.count() > 0:
-            self.lst_profiles.setCurrentRow(0)
+            if self.initial_profile:
+                items = self.lst_profiles.findItems(self.initial_profile, Qt.MatchExactly)
+                if items:
+                    self.lst_profiles.setCurrentItem(items[0])
+                else:
+                    self.lst_profiles.setCurrentRow(0)
+            else:
+                self.lst_profiles.setCurrentRow(0)
         else:
             self.clear_form()
 
@@ -760,6 +836,7 @@ class MainWindow(QWidget):
         self.is_connecting = False         # Flag para bloquear re-intentos de conexión
         self.log_viewer = None
         self.log_path = os.path.join(self.mounter.app_dir, 'mounts.log')
+        self.known_hosts_viewer = None
 
         self.init_ui()
         self.load_global_settings()
@@ -770,8 +847,8 @@ class MainWindow(QWidget):
 
     def init_ui(self):
         self.setObjectName("mainWidget")
-        self.setMinimumSize(580, 680)
-        self.resize(580, 680)
+        self.setMinimumSize(870, 680)
+        self.resize(870, 680)
         self.setStyleSheet(QSS_STYLE)
 
         # Main Layout
@@ -796,6 +873,11 @@ class MainWindow(QWidget):
         self.act_view_log = QAction(self)
         self.act_view_log.triggered.connect(self.on_open_log_viewer)
         self.menu_options.addAction(self.act_view_log)
+
+        # Ver known_hosts
+        self.act_view_known_hosts = QAction(self)
+        self.act_view_known_hosts.triggered.connect(self.on_open_known_hosts_viewer)
+        self.menu_options.addAction(self.act_view_known_hosts)
 
         self.menu_options.addSeparator()
 
@@ -964,6 +1046,15 @@ class MainWindow(QWidget):
             btn_action.clicked.connect(lambda checked=False, p_name=name: self.on_card_action_clicked(p_name))
             card_layout.addWidget(btn_action)
 
+            # Botón para editar el perfil
+            btn_edit = QPushButton()
+            btn_edit.setIcon(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+            btn_edit.setToolTip(self.i18n.t('manage_profiles'))
+            btn_edit.setFixedSize(40, 40)
+            btn_edit.setStyleSheet("background-color: #3b394c; border: 1px solid #54527c; padding: 5px;")
+            btn_edit.clicked.connect(lambda checked=False, p_name=name: self.on_edit_profile_clicked(p_name))
+            card_layout.addWidget(btn_edit)
+
             self.cards_layout.addWidget(card_frame)
 
             self.profile_cards[name] = {
@@ -1051,8 +1142,9 @@ class MainWindow(QWidget):
 
             # Si falla debido a verificación de clave de host SSH (host key verification/unknown host)
             is_host_key_error = any(term in message.lower() for term in [
-                "host key", "key verification", "hostkey", "host key fingerprint", "strictly host key checking"
-            ])
+                "host key", "key verification", "hostkey", "host key fingerprint", "strictly host key checking", "knownhosts", "key is unknown"
+            ]) and "no host key validation is being performed" not in message.lower()
+
 
             if not success and is_host_key_error:
                 self.log_action(profile_name, f"Fallo por clave de host desconocida. Solicitando confirmación al usuario.")
@@ -1100,6 +1192,20 @@ class MainWindow(QWidget):
         dialog.exec_()
         self.load_profiles_dashboard()
 
+    def on_edit_profile_clicked(self, profile_name):
+        """
+        Abre el diálogo de gestión de perfiles con un perfil específico seleccionado por defecto.
+        """
+        dialog = ProfileManagerDialog(
+            parent=self,
+            config_manager=self.config_manager,
+            i18n=self.i18n,
+            active_mounts=self.mounter.active_mounts,
+            initial_profile=profile_name
+        )
+        dialog.exec_()
+        self.load_profiles_dashboard()
+
     def on_open_log_viewer(self):
         """
         Abre la ventana independiente no modal del visor de logs.
@@ -1110,6 +1216,17 @@ class MainWindow(QWidget):
         else:
             self.log_viewer.activateWindow()
             self.log_viewer.raise_()
+
+    def on_open_known_hosts_viewer(self):
+        """
+        Abre la ventana independiente no modal del visor de known_hosts.
+        """
+        if self.known_hosts_viewer is None or not self.known_hosts_viewer.isVisible():
+            self.known_hosts_viewer = KnownHostsViewerDialog(parent=self, i18n=self.i18n)
+            self.known_hosts_viewer.show()
+        else:
+            self.known_hosts_viewer.activateWindow()
+            self.known_hosts_viewer.raise_()
 
     def log_action(self, profile_name: str, message: str):
         """
@@ -1135,6 +1252,7 @@ class MainWindow(QWidget):
         self.menu_options.setTitle(self.i18n.t('menu_options'))
         self.act_manage_profiles.setText(self.i18n.t('manage_profiles'))
         self.act_view_log.setText(self.i18n.t('menu_view_log'))
+        self.act_view_known_hosts.setText(self.i18n.t('menu_view_known_hosts'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
         self.act_start_with_win.setText(self.i18n.t('start_with_win'))
         self.act_minimize_to_tray.setText(self.i18n.t('minimize_to_tray'))
@@ -1168,14 +1286,10 @@ class MainWindow(QWidget):
         En sistemas UNIX, añade rutas de montaje por defecto dentro del directorio del usuario.
         """
         self.cmb_drive_letter.clear()
-        if os.name == 'nt':
-            for char in range(ord('Z'), ord('C'), -1):
-                letter = f"{chr(char)}:"
-                if not self.mounter.is_drive_letter_in_use(letter):
-                    self.cmb_drive_letter.addItem(letter)
-        else:
-            self.cmb_drive_letter.addItem(os.path.expanduser("~/mnt/sftp_drive"))
-            self.cmb_drive_letter.addItem(os.path.expanduser("~/mnt/sftp_test"))
+        for char in range(ord('Z'), ord('C'), -1):
+            letter = f"{chr(char)}:"
+            if not self.mounter.is_drive_letter_in_use(letter):
+                self.cmb_drive_letter.addItem(letter)
 
     def load_profiles_into_combo(self):
         """
@@ -1475,11 +1589,8 @@ class MainWindow(QWidget):
         import os
         import subprocess
         
-        path = os.path.abspath(os.path.expanduser(drive))
-        if os.name == 'nt':
-            os.startfile(path)
-        else:
-            subprocess.Popen(['xdg-open', path])
+        path = os.path.abspath(drive)
+        os.startfile(path)
 
     def show_normal(self):
         """
@@ -1622,16 +1733,10 @@ class MainWindow(QWidget):
         Muestra un cuadro de diálogo informativo (Acerca de) con las versiones del software,
         autor, licencia y enlace al proyecto en GitHub.
         """
-        self.lbl_status.setText(self.i18n.t('versions').upper() + "...")
-        self.app.processEvents()
-        
         # Obtener versiones dinámicamente
         app_version = self.app.applicationVersion()
         rclone_ver = self.mounter.get_rclone_version()
         winfsp_ver = self.mounter.get_winfsp_version()
-        
-        # Restaurar texto de estado
-        self.update_status_label()
         
         github_url = "https://github.com/turulomio/sftp_mounter"
         github_link = f"<a href='{github_url}' style='color: #7c7aeb;'>{github_url}</a>"
@@ -1653,11 +1758,8 @@ class MainWindow(QWidget):
 
     def get_startup_registry(self) -> bool:
         """
-        Comprueba si la entrada de inicio automático de SFTPMounter existe en el Registro de Windows.
+        Determina si el inicio automático está habilitado consultando el registro de Windows.
         """
-        if os.name != 'nt':
-            return False
-            
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
         try:
             import winreg
@@ -1677,10 +1779,6 @@ class MainWindow(QWidget):
         """
         Agrega o remueve la clave del registro de Windows para controlar el inicio automático.
         """
-        if os.name != 'nt':
-            logger.info("Not on Windows, skipping registry startup key modification.")
-            return True
-            
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
         try:
             import winreg

@@ -62,6 +62,24 @@ TRANSLATIONS = {
         'hi': 'लॉग देखें', 'zh': '查看日志', 'ru': 'Просмотр лога',
         'ro': 'Vezi logul'
     },
+    'menu_view_known_hosts': {
+        'es': 'Ver known_hosts', 'en': 'View known_hosts', 'fr': 'Voir known_hosts',
+        'pt': 'Ver known_hosts', 'de': 'known_hosts anzeigen', 'it': 'Visualizza known_hosts',
+        'hi': 'known_hosts देखें', 'zh': '查看 known_hosts', 'ru': 'Просмотр known_hosts',
+        'ro': 'Vezi known_hosts'
+    },
+    'known_hosts_title': {
+        'es': 'Visor de known_hosts', 'en': 'known_hosts Viewer', 'fr': 'Visionneuse de known_hosts',
+        'pt': 'Visualizador de known_hosts', 'de': 'known_hosts-Viewer', 'it': 'Visualizzatore di known_hosts',
+        'hi': 'known_hosts दर्शक', 'zh': 'known_hosts 查看器', 'ru': 'Просмотрщик known_hosts',
+        'ro': 'Vizualizator known_hosts'
+    },
+    'known_hosts_not_found': {
+        'es': 'El archivo known_hosts no existe o no contiene entradas.', 'en': 'The known_hosts file does not exist or has no entries.', 'fr': 'Le fichier known_hosts n\'existe pas ou ne contient pas d\'entrées.',
+        'pt': 'O arquivo known_hosts não existe ou não contém entradas.', 'de': 'Die known_hosts-Datei existiert nicht oder enthält keine Einträge.', 'it': 'Il file known_hosts non esiste o non contiene voci.',
+        'hi': 'known_hosts फ़ाइल मौजूद नहीं है या इसमें कोई प्रविष्टि नहीं है।', 'zh': 'known_hosts 文件不存在或没有条目。', 'ru': 'Файл known_hosts не existe или не содержит записей.',
+        'ro': 'Fișierul known_hosts nu există sau nu conține intrări.'
+    },
     'log_viewer_title': {
         'es': 'Registro de Logs', 'en': 'Log Viewer', 'fr': 'Visionneuse de journaux',
         'pt': 'Visualizador de Logs', 'de': 'Log-Viewer', 'it': 'Visualizzatore di log',
@@ -73,6 +91,18 @@ TRANSLATIONS = {
         'pt': 'Limpar log', 'de': 'Log löschen', 'it': 'Cancella log',
         'hi': 'लॉग साफ़ करें', 'zh': '清除日志', 'ru': 'Очистить лог',
         'ro': 'Curăță logul'
+    },
+    'btn_copy_log': {
+        'es': 'Copiar log', 'en': 'Copy log', 'fr': 'Copier le journal',
+        'pt': 'Copiar log', 'de': 'Log kopieren', 'it': 'Copia log',
+        'hi': 'लॉग कॉपी करें', 'zh': '复制日志', 'ru': 'Копировать лог',
+        'ro': 'Copiază logul'
+    },
+    'log_copied_msg': {
+        'es': 'El contenido del log ha sido copiado al portapapeles.', 'en': 'The log content has been copied to the clipboard.', 'fr': 'Le contenu du journal a été copié dans le presse-papiers.',
+        'pt': 'O conteúdo del log foi copiado para a área de transferência.', 'de': 'Der Log-Inhalt wurde in die Zwischenablage kopiert.', 'it': 'Il contenuto del log è stato copiato negli appunti.',
+        'hi': 'लॉग सामग्री क्लिपबोर्ड पर कॉपी कर दी गई है।', 'zh': '日志内容已复制到剪贴板。', 'ru': 'Содержимое лога скопировано в буфер обмена.',
+        'ro': 'Conținutul logului a fost copiat în clipboard.'
     },
     'btn_close': {
         'es': 'Cerrar', 'en': 'Close', 'fr': 'Fermer',

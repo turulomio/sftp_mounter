@@ -43,14 +43,20 @@ def setup_logging():
     El log escribe simultáneamente tanto en el archivo de texto en formato UTF-8 como
     en la salida estándar (sys.stdout) para facilitar la depuración en tiempo de desarrollo.
     """
-    # Determinar el directorio de logs según la plataforma
-    if os.name == 'nt':
-        # Windows: busca en %APPDATA% o cae en el directorio personal
-        log_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'SFTPMounter')
-    else:
-        # Linux/macOS: estándar XDG en ~/.config
-        log_dir = os.path.join(os.path.expanduser('~'), '.config', 'sftpmounter')
+    # Determinar el directorio de logs (Windows)
+    log_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'SFTPMounter')
         
+    # Borrar logs antiguos antes de inicializar la configuración de logging
+    try:
+        if os.path.exists(log_dir):
+            for filename in os.listdir(log_dir):
+                if filename.startswith('app.log'):
+                    file_path = os.path.join(log_dir, filename)
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+    except Exception as e:
+        sys.stderr.write(f"Warning: Could not delete old log files: {e}\n")
+
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, 'app.log')
 

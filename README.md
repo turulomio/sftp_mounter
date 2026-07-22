@@ -36,30 +36,15 @@ poetry run sftp-mounter
 
 ## Compilar como Ejecutable Único (.exe) para Windows
 
-### Opción A: Compilar desde Windows 11 (Recomendado)
-
-Si estás en Windows 11, ejecuta el script de empaquetado automático mediante Poetry:
+Ejecuta el script de empaquetado automático mediante Poetry en tu sistema Windows:
 
 ```bash
 poetry run python sftp_mounter/package.py
 ```
 
-El ejecutable compilado estará disponible en la carpeta raíz en `dist/SFTPMounter.exe`.
+El ejecutable compilado estará disponible en la carpeta raíz en `dist/SFTPMounter-v<version>.exe`.
 
-### Opción B: Compilar desde Linux (Usando Wine automatizado con PoeThePoet)
+---
 
-Si estás en un sistema Linux, puedes compilar la aplicación utilizando Wine y las tareas automatizadas de **PoeThePoet**:
-
-1. **Asegúrate de tener instalado Wine** en tu sistema Linux (ej: `sudo apt install wine64` en Ubuntu/Debian).
-2. **Configurar el entorno Python de Windows en Wine:**
-   Ejecuta el siguiente comando para descargar e instalar silenciosamente Python para Windows y todas sus dependencias necesarias dentro de tu prefijo Wine:
-   ```bash
-   poetry run poe setup-wine-python
-   ```
-3. **Compilar el archivo ejecutable:**
-   Una vez configurado Wine, ejecuta el empaquetado automático:
-   ```bash
-   poetry run poe build-windows-wine
-   ```
-
-El ejecutable generado se guardará directamente en la raíz en `dist/SFTPMounter.exe`.
+> [!IMPORTANT]
+> **Compatibilidad de Sistema**: Esta aplicación ha sido rediseñada para ser **exclusivamente compatible con sistemas operativos Windows** (Windows 10/11). Se ha eliminado el soporte y el código relativo a sistemas Linux/macOS, puesto que las dependencias de montaje (`WinFsp`) y el control del sistema de archivos están orientados al entorno de red de Windows.
