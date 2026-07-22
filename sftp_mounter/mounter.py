@@ -474,20 +474,38 @@ class Mounter:
                 startupinfo=startupinfo
             )
             
-            # Espera breve de 2 segundos para monitorear si el proceso finaliza inmediatamente.
-            # Rclone suele caerse rápido ante errores de credenciales, puerto bloqueado u host inalcanzable.
-            time.sleep(2.0)
+            # Validar que el montaje se ha realizado de manera efectiva
+            mounted = False
+            error_msg = "El montaje no pudo ser verificado o expiró el tiempo de espera."
             
-            if process.poll() is not None:
-                # El proceso ha terminado con error; leemos la salida de error
-                _, stderr = process.communicate()
-                error_msg = stderr.strip() if stderr else "Error desconocido al conectar."
-                logger.error(f"Rclone mount process failed immediately: {error_msg}")
+            # Realizamos polling por un máximo de 10 segundos (20 iteraciones de 0.5s)
+            for _ in range(20):
+                if process.poll() is not None:
+                    # El proceso ha terminado con error; leemos la salida de error
+                    _, stderr = process.communicate()
+                    error_msg = stderr.strip() if stderr else "El proceso de rclone finalizó inesperadamente."
+                    break
+                
+                if self.is_actually_mounted(drive_letter):
+                    mounted = True
+                    break
+                
+                time.sleep(0.5)
+            
+            if not mounted:
+                logger.error(f"Rclone mount validation failed for {drive_letter}: {error_msg}")
+                # Intentar limpiar/terminar el proceso si sigue vivo
+                if process.poll() is None:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=2.0)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
                 return False, f"Error al conectar: {error_msg}"
 
             # Registrar el subproceso activo referenciado por su letra de unidad
             self.active_mounts[drive_letter] = process
-            logger.info(f"Successfully started mount on {drive_letter}")
+            logger.info(f"Successfully started and validated mount on {drive_letter}")
             return True, f"Unidad montada correctamente en {drive_letter}"
 
         except Exception as e:
@@ -637,5 +655,43 @@ class Mounter:
             logger.error(f"Error querying WinFsp version: {e}")
             
         return "Detectado (Versión desconocida)"
+
+    def is_actually_mounted(self, drive_letter: str) -> bool:
+        """
+        Verifica si la unidad o directorio está montado de forma efectiva y accesible.
+        
+        Args:
+            drive_letter (str): Letra de unidad (ej: Z:) o ruta del directorio de montaje.
+            
+        Returns:
+            bool: True si la unidad está efectivamente montada y es accesible.
+        """
+        if os.name == 'nt':
+            drive_path = drive_letter.upper()
+            if not drive_path.endswith('\\'):
+                drive_path += '\\'
+            try:
+                # Comprobar si existe la unidad y si podemos listar/leer
+                if os.path.exists(drive_path):
+                    os.listdir(drive_path)
+                    return True
+            except Exception:
+                pass
+            return False
+        else:
+            # En Linux/Unix, comprobar os.path.ismount o si está en /proc/mounts
+            try:
+                if os.path.ismount(drive_letter):
+                    return True
+            except Exception:
+                pass
+            try:
+                with open('/proc/mounts', 'r') as f:
+                    mounts = f.read()
+                    if os.path.abspath(drive_letter) in mounts:
+                        return True
+            except Exception:
+                pass
+            return False
 
 

@@ -56,6 +56,36 @@ TRANSLATIONS = {
         'hi': 'विकल्प', 'zh': '选项', 'ru': 'Опции',
         'ro': 'Opțiuni'
     },
+    'menu_view_log': {
+        'es': 'Ver log', 'en': 'View log', 'fr': 'Voir le journal',
+        'pt': 'Ver log', 'de': 'Log anzeigen', 'it': 'Visualizza log',
+        'hi': 'लॉग देखें', 'zh': '查看日志', 'ru': 'Просмотр лога',
+        'ro': 'Vezi logul'
+    },
+    'log_viewer_title': {
+        'es': 'Registro de Logs', 'en': 'Log Viewer', 'fr': 'Visionneuse de journaux',
+        'pt': 'Visualizador de Logs', 'de': 'Log-Viewer', 'it': 'Visualizzatore di log',
+        'hi': 'लॉग दर्शक', 'zh': '日志查看器', 'ru': 'Просмотрщик логов',
+        'ro': 'Vizualizator loguri'
+    },
+    'btn_clear_log': {
+        'es': 'Limpiar log', 'en': 'Clear log', 'fr': 'Effacer le journal',
+        'pt': 'Limpar log', 'de': 'Log löschen', 'it': 'Cancella log',
+        'hi': 'लॉग साफ़ करें', 'zh': '清除日志', 'ru': 'Очистить лог',
+        'ro': 'Curăță logul'
+    },
+    'btn_close': {
+        'es': 'Cerrar', 'en': 'Close', 'fr': 'Fermer',
+        'pt': 'Fechar', 'de': 'Schließen', 'it': 'Chiudi',
+        'hi': 'बंद करें', 'zh': '关闭', 'ru': 'Закрыть',
+        'ro': 'Închide'
+    },
+    'log_cleared_msg': {
+        'es': 'El archivo de logs ha sido limpiado.', 'en': 'The log file has been cleared.', 'fr': 'Le fichier de journal a été effacé.',
+        'pt': 'O arquivo de log foi limpo.', 'de': 'Die Logdatei wurde gelöscht.', 'it': 'Il file di log è stato cancellato.',
+        'hi': 'लॉग फ़ाइल साफ़ कर दी गई है।', 'zh': '日志文件已清除。', 'ru': 'Файл лога очищен.',
+        'ro': 'Fișierul de log a fost curățat.'
+    },
     'menu_help': {
         'es': 'Ayuda', 'en': 'Help', 'fr': 'Aide',
         'pt': 'Ajuda', 'de': 'Hilfe', 'it': 'Aiuto',
