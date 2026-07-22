@@ -25,6 +25,8 @@ setup-wine-python = [
     { cmd = "wine python -m pip install ." }
 ]
 build-windows-wine = { cmd = "wine python sftp_mounter/package.py" }
+run-wine = { cmd = "wine python sftp_mounter/main.py" }
+
 
 [build-system]
 requires = ["poetry-core"]

@@ -77,16 +77,10 @@ class ConfigManager:
         """
         Inicializa el gestor de configuración calculando la ruta óptima según el sistema operativo.
         """
-        # Determinar el directorio de configuración adecuado según el SO
-        if os.name == 'nt':
-            # Windows: %APPDATA%/SFTPMounter
-            self.config_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'SFTPMounter')
-        else:
-            # Linux/macOS fallback estándar: ~/.config/sftpmounter
-            self.config_dir = os.path.join(os.path.expanduser('~'), '.config', 'sftpmounter')
-            
-        self.config_file = os.path.join(self.config_dir, 'profiles.json')
+        # Windows: %APPDATA%/SFTPMounter
+        self.config_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'SFTPMounter')
         self._ensure_config_dir()
+        self.config_file = os.path.join(self.config_dir, 'profiles.json')
 
     def _ensure_config_dir(self):
         """
@@ -95,7 +89,14 @@ class ConfigManager:
         try:
             os.makedirs(self.config_dir, exist_ok=True)
         except Exception as e:
-            logger.error(f"Failed to create configuration directory: {e}")
+            logger.warning(f"Failed to create configuration directory in AppData, falling back to temp: {e}")
+            import tempfile
+            self.config_dir = os.path.join(tempfile.gettempdir(), 'SFTPMounter')
+            try:
+                os.makedirs(self.config_dir, exist_ok=True)
+            except Exception:
+                pass
+
 
     def _read_raw(self):
         """
@@ -162,6 +163,7 @@ class ConfigManager:
         decoded_profiles = {}
         for name, profile in raw_profiles.items():
             p_copy = dict(profile)
+            p_copy['profile_name'] = name
             if 'password' in p_copy:
                 p_copy['password'] = _decode_pass(p_copy['password'])
             if 'key_password' in p_copy:
@@ -182,6 +184,8 @@ class ConfigManager:
         encoded_profiles = {}
         for name, profile in profiles.items():
             p_copy = dict(profile)
+            if 'profile_name' in p_copy:
+                p_copy.pop('profile_name')
             if 'password' in p_copy:
                 p_copy['password'] = _encode_pass(p_copy['password'])
             if 'key_password' in p_copy:
