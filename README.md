@@ -1,71 +1,70 @@
-# SFTP Mounter
+# 🚀 SFTP Mounter
 
-A simple Qt6 GUI tool to mount SFTP connections as network drives on Windows 11 using Rclone and WinFsp.
+[![OS: Windows](https://img.shields.io/badge/OS-Windows%2010%20%2F%2011-blue?logo=windows)](https://www.microsoft.com/windows)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/turulomio/sftp_mounter/total?logo=github)](https://github.com/turulomio/sftp_mounter/releases)
+[![Python: >=3.10](https://img.shields.io/badge/Python->=3.10-blue.svg?logo=python)](https://python.org)
+[![GUI: PySide6 / Qt6](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt6-teal.svg?logo=qt)](https://www.qt.io/)
 
-## Características
-
-*   **Distribución Todo-en-Uno:** Compila a un único ejecutable `.exe` con todas sus dependencias incluidas (como el binario portable de `rclone`).
-*   **Múltiples Montajes Simultáneos:** Permite mapear y conectar varias unidades SFTP concurrentemente de forma independiente, asociando distintas letras de unidad a cada perfil de conexión.
-*   **Detección Robusta de WinFsp:** Comprobación dinámica a través de la API del Registro de Windows (incluyendo las claves `Uninstall` por GUID, servicios del kernel con control de permisos y carpetas del sistema sin depender de `launcherd.exe`), garantizando la detección del driver del sistema de archivos en cualquier configuración de Windows.
-*   **Diseño Limpio con Barra de Menús:** Interfaz despejada mediante una barra de menús superior (`QMenuBar`) que agrupa opciones globales:
-    - *Opciones:* Activar inicio automático, minimizar a la bandeja, y submenú para cambiar el idioma al vuelo.
-    - *Ayuda:* Acceso al diálogo "Acerca de".
-*   **Auto-montaje en Cola:** Soporte para auto-conectar múltiples unidades al arranque usando un temporizador asíncrono no bloqueante para mantener la respuesta de la UI.
-*   **Acceso Rápido desde la Bandeja:** El menú contextual del icono de la bandeja de sistema lista las unidades montadas activas en tiempo real y permite abrir su ruta en el Explorador de Archivos nativo con un solo clic.
-*   **Autenticación Flexible:** Admite contraseña clásica, llave privada SSH, o llave privada SSH cifrada con frase de paso (passphrase).
-*   **Historial de Conexiones:** Guarda múltiples perfiles para cargarlos rápidamente.
-*   **Inicio Automático:** Opción de arrancar con Windows en segundo plano.
-*   **Minimizado a la Bandeja (Tray):** Oculta la aplicación en la barra de tareas al cerrar o minimizar para mantener el SFTP montado.
-*   **Instancia Única Protegida:** Implementa un mecanismo de prevención mediante `QLockFile` para evitar la ejecución simultánea de múltiples instancias y sus consecuentes conflictos de bloqueo en archivos de log.
-*   **Conexiones No Persistentes (Temporales):** Los montajes son transitorios y no se registran permanentemente en Windows. Si una unidad queda en estado "desconectado" o no es eliminada debido a configuraciones específicas del usuario, desaparecerá automáticamente al reiniciar el sistema.
-
-## Requisitos de Desarrollo
-
-*   Python >= 3.9
-*   Poetry (para gestión de dependencias)
-
-## Instalar Dependencias
-
-```bash
-poetry install
-```
-
-## Ejecutar en Desarrollo
-
-```bash
-poetry run sftp-mounter
-```
-
-## Compilar como Ejecutable Único (.exe) para Windows
-
-Ejecuta el script de empaquetado automático mediante Poetry en tu sistema Windows:
-
-```bash
-poetry run python sftp_mounter/package.py
-```
-
-El ejecutable compilado estará disponible en la carpeta raíz en `dist/SFTPMounter-v<version>.exe`.
+**SFTP Mounter** is a simple, lightweight, and modern Qt6/PySide6 graphical user interface designed to mount SFTP servers as native network drives on **Windows 10/11** using **Rclone** and **WinFsp**.
 
 ---
 
-> [!IMPORTANT]
-> **Compatibilidad de Sistema**: Esta aplicación ha sido rediseñada para ser **exclusivamente compatible con sistemas operativos Windows** (Windows 10/11). Se ha eliminado el soporte y el código relativo a sistemas Linux/macOS, puesto que las dependencias de montaje (`WinFsp`) y el control del sistema de archivos están orientados al entorno de red de Windows.
+## 📸 Screenshots
 
+| Connection Manager | System Tray Quick Access |
+|:---:|:---:|
+| ![SFTP Mounter Main UI](sftp_mounter/images/logo.svg) | *Easily access and open your mounted drives directly from the Windows System Tray* |
 
+*(Note: Add your actual screenshots in the placeholder above!)*
 
-# RUTA DE ARCHIVOS EN WINDOWS 11
+---
 
-## Logs
-C:\Users\user\AppData\Roaming\SFTPMounter\app.log
+## ✨ Features
 
-## Configuración
-C:\Users\user\AppData\Roaming\SFTPMounter\config.json
+*   📦 **All-in-One Standalone Executable:** Compiles into a single `.exe` file with all dependencies embedded (including the portable `rclone` binary).
+*   🌐 **Multiple Active Mounts:** Map and mount multiple SFTP connections simultaneously to different Windows drive letters.
+*   🔒 **Flexible Authentication:** Supports password authentication, standard SSH private keys, and passphrase-encrypted SSH keys.
+*   💾 **Connection Profiles:** Save and quickly load your server configuration history.
+*   ⚙️ **System Tray Integration:** Minimize to the system tray, keeping your drives active while running in the background. Right-click the icon to view or open your mounted paths directly in File Explorer.
+*   🚀 **Auto-Mount on Startup:** Automatically connect selected profiles on app startup using an asynchronous, non-blocking queue.
+*   🛡️ **Windows Registry WinFsp Detection:** Dynamically detects the system's WinFsp driver using multiple fallback strategies (registry key GUIDs, kernel services, environment paths).
+*   🌐 **On-the-Fly Language Switch:** Toggle interface language dynamically (English, Spanish, etc.).
+*   🔒 **Single-Instance Protection:** Prevents conflicts by allowing only one running instance of the application using file locks.
 
-## Binarios
-C:\Users\user\AppData\Roaming\SFTPMounter\bin\rclone.exe
-C:\Users\user\AppData\Roaming\SFTPMounter\bin\winfsp.msi
+---
 
-## SSH known_hosts
-C:\Users\user\.ssh\known_hosts
+## 🚀 Getting Started for Users
 
-Actualmente no se almacena nada en known_hosts, Rclone no lo hace. Se emula haciendo una conexión a la ip y al puerto con herramientas como putty, ssh ... (PENDIENTE DE DESARROLLO)
+### 1. Prerequisites
+Before mounting your first SFTP drive, ensure you have **WinFsp** installed.
+*   If WinFsp is missing, SFTP Mounter will show a warning panel with a direct option to download and install it.
+*   Alternatively, you can download it from [WinFsp Releases](https://github.com/winfsp/winfsp/releases).
+
+### 2. Running SFTP Mounter
+1.  Download the latest standalone executable `SFTPMounter-vX.Y.Z.exe` from the GitHub **Releases** section.
+2.  Launch the executable. No installation is required!
+
+### 3. Mounting a Drive
+1.  Fill in your server connection details: **Host**, **Port**, **User**, and **Password** (or browse for your **SSH Private Key**).
+2.  Choose a **Drive Letter** (e.g., `S:`) and give your connection a friendly **Volume Name**.
+3.  Click **Connect & Mount**.
+4.  Once connected, your drive will open automatically in Windows File Explorer!
+
+---
+
+## 📂 File & Log Locations (Windows)
+
+All application data is securely stored in your local Windows user profile:
+
+*   **Logs:** `C:\Users\<YourUser>\AppData\Roaming\SFTPMounter\app.log`
+*   **Settings & Profiles:** `C:\Users\<YourUser>\AppData\Roaming\SFTPMounter\config.json`
+*   **Embedded Binaries:** `C:\Users\<YourUser>\AppData\Roaming\SFTPMounter\bin\` (`rclone.exe`, etc.)
+
+---
+
+## 🛠️ Development & Architecture
+
+If you want to contribute, compile the application yourself, or inspect the project changes, please check the developer guide:
+
+👉 **[gemini.md](file:///home/worky/Proyectos/sftp_mounter/gemini.md)**

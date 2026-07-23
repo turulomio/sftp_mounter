@@ -1,115 +1,81 @@
-# Resumen de Cambios y Documentación del Proyecto
+# Developer Guide & Project Architecture
 
-Este documento detalla las últimas optimizaciones y correcciones de diseño realizadas en el proyecto **SFTP Mounter**, garantizando una experiencia de usuario fluida y libre de bloqueos.
-
----
-
-## 1. Detección de WinFsp No Bloqueante
-
-Para evitar frustraciones al usuario ante posibles falsos negativos de detección (debido a configuraciones de sistema no estándar), se han implementado los siguientes cambios:
-
-* **Conexión Habilitada**: El botón **"Conectar y Montar"** (`btn_connect`) permanece **siempre habilitado** en el estado desconectado. Si WinFsp no se detecta, se muestra la tarjeta de advertencia informativa roja con la opción de instalar el driver, pero el usuario puede intentar conectar de todos modos.
-* **Estrategia de Detección en PATH**: Se añadió una 6ª estrategia en [mounter.py](file:///home/worky/sftp_mounter/sftp_mounter/mounter.py) que busca de manera dinámica si la carpeta del ejecutable `launcherd.exe` se encuentra registrada en la variable de entorno `PATH` del sistema.
+This document outlines the current architecture, development workflow, and technical details of the **SFTP Mounter** project. It is intended for developers and AI assistants working on this codebase.
 
 ---
 
-## 2. Optimización del Layout y Redimensión de la Ventana
+## 🖥️ System & Platform Constraints
 
-Se corrigió el problema de solapamiento o reducción excesiva de las cajas de texto en resoluciones de pantalla alta (DPI) de la siguiente manera:
-
-* **Eliminación de Spans en Rejilla**: En la rejilla del formulario (`config_layout`), las cajas de texto (`Host`, `User`, `Password`, `Remote Path`) ahora se ubican limpiamente dentro de la **Columna 1**, liberando la **Columna 2** (que ahora es de uso exclusivo para el botón "Examinar..." de la clave SSH en la fila 5).
-* **Control de Estiramiento**: Se fijaron factores de estiramiento donde la Columna 1 tiene prioridad (`setColumnStretch(1, 1)`), impidiendo que las columnas colapsen cuando la fila de la clave privada se oculta.
-* **Dimensiones de Ventana Ampliadas**: Se aumentó el tamaño mínimo y el tamaño por defecto de la ventana principal a **`560 x 780`** píxeles. Esto ofrece un aspecto cómodo, simétrico y espacioso para albergar los textboxes de mayor tamaño.
+*   **Windows-Only:** The application is designed exclusively for Windows (10/11) because it relies on the WinFsp driver and Windows-native drive letter mapping (`net use`).
+*   **Linux/macOS Development (via Wine):** Since the tool runs only on Windows, Linux developers can run and package the application using Wine (see [Development Tasks](#development-tasks)).
 
 ---
 
-## 3. Integración de Logotipo e Icono Versionado
+## ⚙️ Core Architecture & Components
 
-* **Logotipo en SVG y `.ico`**: Se diseñó el logotipo del proyecto en formato SVG ([logo.svg](file:///home/worky/sftp_mounter/logo.svg)) y se transformó a un icono de Windows multi-resolución ([logo.ico](file:///home/worky/sftp_mounter/sftp_mounter/logo.ico)).
-* **Icono de la App**: La ventana principal y la bandeja del sistema cargan dinámicamente este logotipo personalizado.
-* **Empaquetado Versionado**: Se modificó [package.py](file:///home/worky/sftp_mounter/sftp_mounter/package.py) para que el binario final generado por PyInstaller en la carpeta `dist/` se renombre de forma automática según la versión definida en `pyproject.toml` (ej. `SFTPMounter-v1.0.0`), incrustando el correspondiente archivo `.ico`.
+### 1. WinFsp Driver Detection
+To avoid issues with non-standard setups, the driver detection in [mounter.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/mounter.py) runs 6 fallback strategies:
+*   Windows Registry scan (checking Uninstall GUID keys).
+*   Kernel service lookup.
+*   System directories check.
+*   Environment `PATH` search for `launcherd.exe`.
+*   *Failsafe:* The **Connect & Mount** button remains enabled even if detection fails, allowing users to attempt connection at their own risk (with a warning panel).
 
----
+### 2. SSH Host Key Validation (`known_hosts`)
+*   Validates host keys against the system default `~/.ssh/known_hosts` file.
+*   If a host key is missing, it prompts the user to add it, calling `ssh-keyscan` under the hood.
+*   *Failsafe:* If writing to `known_hosts` is blocked (e.g., due to permissions), the application falls back to connecting without verification (bypassing host-key check) for that session to prevent blocking the mount.
 
-## 4. Cómo Compilar el Ejecutable
+### 3. Log Cleanup & Single-Instance Prevention
+*   **Startup Log Purge:** Before logging initialization in [main.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/main.py), it purges any existing `app.log` files. If a file is locked, the exception is caught silently and written to `stderr`.
+*   **Instance Lock:** Uses `QLockFile` to restrict execution to a single instance. If another instance is running, it prompts the user and terminates cleanly (`sys.exit(0)`).
 
-Para empaquetar de forma manual el ejecutable, ejecuta el comando correspondiente desde la raíz del proyecto:
-
-```bash
-poetry run python sftp_mounter/package.py
-```
-*El binario portable final se alojará en la carpeta `dist/`.*
-
----
-
-## 5. Remoción de Soporte y Código de Linux (Windows-Only)
-
-Para simplificar el mantenimiento y asegurar la robustez de las dependencias nativas del sistema, se ha eliminado por completo toda la lógica y bifurcaciones de código relativas a sistemas Unix/Linux:
-* **Rutas de Datos y Logs**: Se han removido las rutas basadas en estándares XDG (`~/.config/sftpmounter`). La aplicación ahora resuelve de forma estricta el directorio nativo de Windows `%APPDATA%/SFTPMounter`.
-* **Montaje y Desmontaje de Unidades**: Se ha eliminado toda la lógica que usaba directorios físicos temporales y el comando `fusermount` de Linux, manteniendo exclusivamente el montaje de unidades mediante letras de volumen de Windows y el comando nativo `net use /delete`.
-* **Detección de Controladores**: Se simplificaron los métodos `is_winfsp_installed`, `get_winfsp_version` e `install_winfsp` para operar únicamente bajo las API de Windows (como el acceso al registro de Windows a través de `winreg`).
-
----
-
-## 6. Borrado de Logs Antiguos al Iniciar
-
-Para evitar el crecimiento indefinido del archivo de registros y mantener las sesiones limpias, se implementó el borrado de logs antiguos al iniciar la aplicación:
-* **Limpieza de Logs al Inicio**: Antes de inicializar la configuración de `logging`, la función `setup_logging` en [main.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/main.py) recorre el directorio de configuración y elimina cualquier archivo que comience con `app.log` (como `app.log` y posibles logs rotados de ejecuciones previas).
-* **Manejo de Excepciones**: En caso de que un archivo esté bloqueado por otra instancia o no se pueda borrar por permisos, se captura la excepción de forma silenciosa escribiendo una advertencia en la salida de error estándar para no interrumpir el arranque de la aplicación.
+### 4. UI Layout & Settings
+*   **Window Metrics:** The main GUI window is configured with a minimum size of `560 x 780` px to support high-DPI displays without text clipping.
+*   **Layout Structure:** The connection form fields utilize a structured column grid to maintain responsiveness when SSH private key option inputs are toggled.
+*   **Settings Dialog:** Located in [gui.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/gui.py), it allows users to manage application language (defaulting to English with dynamic Spanish fallbacks), startup behavior, tray minimization, and volume format.
+*   **Volume Name Format (`conn_in_volname`):** A config parameter. When set to `False` (default), the drive volume name matches the profile name. When `True`, it includes the connection details (`user@host!port`).
 
 ---
 
-## 7. Gestión Híbrida de known_hosts y Validación SSH Segura
+## 🛠️ Development Tasks
 
-Se ha reimplementado la lógica de validación de host key del servidor SSH de forma robusta e interactiva:
-* **Uso del Path Estándar**: La validación se realiza contra el archivo estándar del sistema `~/.ssh/known_hosts` (el cual se visualiza recuperando la opción "Ver known_hosts" en el menú de la aplicación).
-* **Escaneo y Escritura Automatizada**: Al conectar a un nuevo servidor cuya clave no esté registrada, se solicita confirmación al usuario. Si acepta, la aplicación ejecuta `ssh-keyscan` para recuperar e inyectar la clave en el archivo `known_hosts` de manera programática.
-* **Tolerancia a Fallos y Modo Bypaseado**: Si el escaneo falla o el archivo de hosts del usuario no tiene permisos de escritura (p. ej. en perfiles Windows restrictivos), el sistema aplica un fallback de contingencia seguro: conecta omitiendo la validación para esa sesión (bypaseando la clave), garantizando así que el montaje final se realice sin interrupciones ni bloqueos de acceso.
+### Local Windows Development
+If running on a native Windows machine:
+1.  **Install dependencies:**
+    ```bash
+    poetry install
+    ```
+2.  **Run the application:**
+    ```bash
+    poetry run sftp-mounter
+    ```
+3.  **Compile standalone executable:**
+    ```bash
+    poetry run python sftp_mounter/package.py
+    ```
+    *Generates a single, versioned `.exe` with embedded binaries inside `dist/`.*
 
-
-
----
-
-## 8. Desarrollo y Pruebas en Linux (usando Wine)
-
-Dado que la aplicación está diseñada específicamente para entornos Windows (Windows-only), el desarrollo, ejecución y pruebas en sistemas Linux se realizan a través de Wine:
-* **Entorno Wine**: Se configuran Python de Windows y las dependencias (como PySide6) mediante la tarea de configuración `poetry run poe setup-wine-python`.
-* **Ejecución en Caliente**: Para iniciar y probar el código fuente sin realizar un empaquetado previo, se ejecuta el comando:
-  ```bash
-  poetry run poe run-wine
-  ```
-* **Compilación Cruzada**: El empaquetado del ejecutable final `.exe` para Windows se realiza desde Wine ejecutando:
-  ```bash
-  poetry run poe build-windows-wine
-  ```
-
----
-
-## 9. Compilación del Icono del Ejecutable
-* **Icono Embebido**: Se configuró la compilación mediante PyInstaller (tanto en [SFTPMounter-v1.0.0.spec](file:///home/worky/Proyectos/sftp_mounter/SFTPMounter-v1.0.0.spec) como en [package.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/package.py)) para integrar automáticamente el icono `sftp_mounter/images/logo.ico` en el archivo ejecutable `.exe` resultante.
-* **Actualización de Ruta de Logo**: Se corrigió el flujo de copia en el script de empaquetado para leer el archivo del logotipo SVG desde su nueva ubicación en `sftp_mounter/images/logo.svg`.
-
----
-
-## 10. Prevención de Instancia Única
-* **Uso de QLockFile**: Se implementó protección mediante `QLockFile` en el punto de entrada [main.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/main.py), impidiendo ejecuciones concurrentes de la aplicación.
-* **Control de Cierre Limpio**: Si el programa detecta que ya se encuentra activo en segundo plano, muestra un cuadro de diálogo informativo al usuario y sale de manera limpia (`sys.exit(0)`), previniendo conflictos y bloqueos de lectura/escritura en los archivos de registro (`app.log`).
+### Linux Wine Development
+If developing on Linux/macOS:
+1.  **Configure Windows Python inside Wine:**
+    ```bash
+    poetry run poe setup-wine-python
+    ```
+2.  **Run code in Wine:**
+    ```bash
+    poetry run poe run-wine
+    ```
+3.  **Build Windows executable via Wine:**
+    ```bash
+    poetry run poe build-windows-wine
+    ```
 
 ---
 
-## 11. Remoción de Distribución y Código de UNIX en Empaquetado
-* **Empaquetado Exclusivo de Windows**: Se reescribió por completo el script [package.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/package.py) eliminando toda referencia o soporte de compilación para sistemas UNIX/Linux (incluyendo descargas de Rclone de Linux, asignaciones de permisos de ejecución `chmod +x` y separadores de rutas colon `:`).
-* **Bloqueo Multiplataforma Nativo**: Se introdujo una comprobación estricta (`os.name == 'nt'`) al inicio del script para bloquear cualquier intento de compilación directo fuera de Windows o entornos Wine.
+## 📂 Key Path References
 
----
-
-## 12. Diálogo Centralizado de Configuración (Settings)
-* **Settings Dialog**: Se creó un diálogo de configuración global en [gui.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/gui.py) que unifica el ajuste del idioma, el inicio con Windows, el minimizado a la bandeja y el formato de volumen.
-* **Mostrar Cadena de Conexión**: Se añadió una opción booleana `conn_in_volname` (desactivada por defecto). Si está desactivada, el volumen montado en el explorador de Windows usará únicamente el nombre asignado al perfil; si está activada, incluirá la cadena de conexión detallada (`user@host!port`).
-
----
-
-## 13. Inglés como Idioma por Defecto y de Desarrollo
-* **Por defecto Inglés ('en')**: Se reconfiguró el cargador I18N y la inicialización de la interfaz para establecer el inglés como idioma inicial por defecto.
-* **Priorización de Fallback**: Se ajustó la resolución de traducciones de `i18n.py` para priorizar el inglés ante la ausencia de claves, y se tradujeron todos los mensajes e indicaciones fijas de código (como la advertencia de instancia única) al inglés.
-
+During execution, the application reads/writes to these paths on the user's system:
+*   **Logs:** `%APPDATA%\SFTPMounter\app.log`
+*   **Configuration & Profiles:** `%APPDATA%\SFTPMounter\config.json`
+*   **Embedded Binaries:** `%APPDATA%\SFTPMounter\bin\` (stores the extracted `rclone.exe`)
