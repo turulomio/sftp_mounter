@@ -538,12 +538,51 @@ class Mounter:
             logger.error(f"Failed to execute rclone mount process: {e}")
             return False, f"Failed to start process: {str(e)}"
 
+    def _kill_rclone_for_drive(self, drive_letter: str):
+        """
+        Forcefully terminates any running rclone.exe processes associated with a specific drive letter.
+        """
+        drive = drive_letter.upper()
+        if not drive.endswith(':'):
+            drive += ':'
+            
+        try:
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            # Target the specific drive letter using PowerShell
+            cmd = [
+                "powershell", "-NoProfile", "-Command",
+                f"Get-CimInstance Win32_Process -Filter \"Name = 'rclone.exe'\" | Where-Object {{ $_.CommandLine -like '*{drive}*' }} | ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force }}"
+            ]
+            subprocess.run(cmd, capture_output=True, startupinfo=startupinfo, timeout=5.0)
+            logger.info(f"Killed orphaned rclone processes for drive {drive} using PowerShell.")
+        except Exception as e:
+            logger.warning(f"PowerShell process cleanup failed: {e}")
+            
+            # Fallback to wmic-based query if PowerShell failed
+            try:
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                cmd = ["wmic", "process", "where", "name='rclone.exe'", "get", "CommandLine,ProcessId"]
+                res = subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo, timeout=5.0)
+                for line in res.stdout.splitlines():
+                    if drive in line:
+                        parts = line.strip().split()
+                        if parts:
+                            pid = parts[-1]
+                            if pid.isdigit():
+                                subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True, startupinfo=startupinfo)
+                                logger.info(f"Killed process {pid} using taskkill.")
+            except Exception as ex:
+                logger.error(f"Fallback process cleanup failed: {ex}")
+
     def unmount_sftp(self, drive_letter: str) -> bool:
         """
         Cleanly unmounts a previously mapped SFTP drive.
         
         1. Terminates the secondary rclone process friendly (terminate) and then forced (kill) if unresponsive.
-        2. Executes cleanup commands at OS level to free the assigned drive letter.
+        2. Forcefully kills any orphaned/remaining rclone processes for this drive letter.
+        3. Executes cleanup commands at OS level to free the assigned drive letter.
            - Windows: 'net use <letter> /delete /y'
            
         Args:
@@ -573,7 +612,10 @@ class Mounter:
                 if drive_letter in self.active_mounts:
                     del self.active_mounts[drive_letter]
 
-        # 2. Run native cleanup commands (Windows-only)
+        # 2. Always kill any other/orphaned rclone processes associated with this drive letter
+        self._kill_rclone_for_drive(drive_letter)
+
+        # 3. Run native cleanup commands (Windows-only)
         try:
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
