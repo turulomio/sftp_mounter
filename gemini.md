@@ -83,3 +83,33 @@ Dado que la aplicación está diseñada específicamente para entornos Windows (
   poetry run poe build-windows-wine
   ```
 
+---
+
+## 9. Compilación del Icono del Ejecutable
+* **Icono Embebido**: Se configuró la compilación mediante PyInstaller (tanto en [SFTPMounter-v1.0.0.spec](file:///home/worky/Proyectos/sftp_mounter/SFTPMounter-v1.0.0.spec) como en [package.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/package.py)) para integrar automáticamente el icono `sftp_mounter/images/logo.ico` en el archivo ejecutable `.exe` resultante.
+* **Actualización de Ruta de Logo**: Se corrigió el flujo de copia en el script de empaquetado para leer el archivo del logotipo SVG desde su nueva ubicación en `sftp_mounter/images/logo.svg`.
+
+---
+
+## 10. Prevención de Instancia Única
+* **Uso de QLockFile**: Se implementó protección mediante `QLockFile` en el punto de entrada [main.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/main.py), impidiendo ejecuciones concurrentes de la aplicación.
+* **Control de Cierre Limpio**: Si el programa detecta que ya se encuentra activo en segundo plano, muestra un cuadro de diálogo informativo al usuario y sale de manera limpia (`sys.exit(0)`), previniendo conflictos y bloqueos de lectura/escritura en los archivos de registro (`app.log`).
+
+---
+
+## 11. Remoción de Distribución y Código de UNIX en Empaquetado
+* **Empaquetado Exclusivo de Windows**: Se reescribió por completo el script [package.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/package.py) eliminando toda referencia o soporte de compilación para sistemas UNIX/Linux (incluyendo descargas de Rclone de Linux, asignaciones de permisos de ejecución `chmod +x` y separadores de rutas colon `:`).
+* **Bloqueo Multiplataforma Nativo**: Se introdujo una comprobación estricta (`os.name == 'nt'`) al inicio del script para bloquear cualquier intento de compilación directo fuera de Windows o entornos Wine.
+
+---
+
+## 12. Diálogo Centralizado de Configuración (Settings)
+* **Settings Dialog**: Se creó un diálogo de configuración global en [gui.py](file:///home/worky/Proyectos/sftp_mounter/sftp_mounter/gui.py) que unifica el ajuste del idioma, el inicio con Windows, el minimizado a la bandeja y el formato de volumen.
+* **Mostrar Cadena de Conexión**: Se añadió una opción booleana `conn_in_volname` (desactivada por defecto). Si está desactivada, el volumen montado en el explorador de Windows usará únicamente el nombre asignado al perfil; si está activada, incluirá la cadena de conexión detallada (`user@host!port`).
+
+---
+
+## 13. Inglés como Idioma por Defecto y de Desarrollo
+* **Por defecto Inglés ('en')**: Se reconfiguró el cargador I18N y la inicialización de la interfaz para establecer el inglés como idioma inicial por defecto.
+* **Priorización de Fallback**: Se ajustó la resolución de traducciones de `i18n.py` para priorizar el inglés ante la ausencia de claves, y se tradujeron todos los mensajes e indicaciones fijas de código (como la advertencia de instancia única) al inglés.
+

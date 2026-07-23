@@ -1,15 +1,15 @@
 """
-Punto de entrada principal de la aplicación SFTP Mounter.
+Main entry point of the SFTP Mounter application.
 
-Este módulo se encarga de:
-1. Configurar y ajustar el `sys.path` para garantizar la resolución correcta de módulos locales.
-2. Inicializar el sistema de registro de logs (`logging`) en rutas dependientes del sistema operativo.
-3. Configurar variables de entorno y estilos globales para la interfaz gráfica PySide6 (High DPI, estilo Fusion).
-4. Instanciar la aplicación Qt, comprobar los argumentos de línea de comandos (ej. iniciar minimizado) y lanzar el bucle de eventos.
+This module is responsible for:
+1. Setting up and adjusting `sys.path` to ensure correct local module resolution.
+2. Initializing the logging system in OS-dependent paths.
+3. Configuring global environment variables and styles for the PySide6 GUI (High DPI, Fusion style).
+4. Instantiating the Qt application, checking command line arguments (e.g. starting minimized), and starting the event loop.
 
-Para desarrolladores nuevos:
-- El flujo comienza en el bloque `if __name__ == '__main__':` invocando a `main()`.
-- Si el ejecutable se inicia con el argumento `--minimized`, el proceso se ejecutará directamente en la bandeja del sistema (System Tray) sin mostrar la ventana principal inmediatamente.
+For new developers:
+- The flow starts in the `if __name__ == '__main__':` block by calling `main()`.
+- If the executable starts with the `--minimized` argument, the process runs directly in the system tray without showing the main window immediately.
 """
 
 import sys
@@ -17,13 +17,13 @@ import os
 import logging
 
 # ==============================================================================
-# RESOLUCIÓN DE RUTAS E IMPORTACIONES LOCALES
+# RESOLUTION OF LOCAL PATHS AND IMPORTS
 # ==============================================================================
-# Cuando se ejecuta la aplicación como un binario empaquetado (con PyInstaller) o
-# directamente desde la consola en modo de desarrollo, es fundamental ajustar
-# las rutas de búsqueda de Python para evitar errores de importación de módulos.
-package_dir = os.path.dirname(os.path.abspath(__file__))  # Directorio 'sftp_mounter'
-parent_dir = os.path.dirname(package_dir)                 # Directorio raíz del proyecto
+# When running the application as a packaged binary (with PyInstaller) or
+# directly from the console in development mode, it is essential to adjust
+# Python's search paths to avoid module import errors.
+package_dir = os.path.dirname(os.path.abspath(__file__))  # 'sftp_mounter' directory
+parent_dir = os.path.dirname(package_dir)                 # Project root directory
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 if package_dir not in sys.path:
@@ -34,19 +34,18 @@ from sftp_mounter.gui import MainWindow
 
 def setup_logging():
     """
-    Configura el sistema de logs a nivel global en la aplicación.
+    Configures the logging system globally in the application.
     
-    Genera un archivo 'app.log' en una ubicación persistente de la máquina del usuario:
+    Generates an 'app.log' file in a persistent location of the user's machine:
     - Windows: %APPDATA%/SFTPMounter/app.log
-    - Linux/macOS: ~/.config/sftpmounter/app.log
     
-    El log escribe simultáneamente tanto en el archivo de texto en formato UTF-8 como
-    en la salida estándar (sys.stdout) para facilitar la depuración en tiempo de desarrollo.
+    The log writes simultaneously to both the text file in UTF-8 format and
+    standard output (sys.stdout) to facilitate debugging in development mode.
     """
-    # Determinar el directorio de logs (Windows)
+    # Determine the log directory (Windows)
     log_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'SFTPMounter')
     
-    # Intentar asegurar la existencia de la ruta del directorio
+    # Try to guarantee the physical existence of the directory path
     try:
         os.makedirs(log_dir, exist_ok=True)
     except Exception as e:
@@ -58,7 +57,7 @@ def setup_logging():
         except Exception:
             pass
         
-    # Borrar logs antiguos antes de inicializar la configuración de logging
+    # Delete old logs before initializing the logging configuration
     try:
         if os.path.exists(log_dir):
             for filename in os.listdir(log_dir):
@@ -71,7 +70,7 @@ def setup_logging():
 
     log_file = os.path.join(log_dir, 'app.log')
 
-    # Configuración básica de logging
+    # Basic logging configuration
     try:
         file_handler = logging.FileHandler(log_file, encoding='utf-8')
         handlers = [file_handler, logging.StreamHandler(sys.stdout)]
@@ -88,20 +87,20 @@ def setup_logging():
 
 def main():
     """
-    Inicializa el entorno, prepara la ventana principal de PySide6 y arranca el loop de Qt.
+    Initializes the environment, prepares the main PySide6 window, and starts the Qt event loop.
     """
-    # Habilitar el escalado automático de pantalla (High DPI).
-    # Esto es sumamente importante en sistemas modernos (Windows 11, pantallas 4K)
-    # para que la interfaz gráfica no se vea borrosa o excesivamente pequeña.
+    # Enable automatic screen scaling (High DPI).
+    # This is extremely important on modern systems (Windows 11, 4K screens)
+    # so that the user interface does not look blurry or excessively small.
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     
     app = QApplication(sys.argv)
     app.setApplicationName("SFTP Drive Mounter")
     app.setApplicationVersion("1.0.0")
-    app.setOrganizationName("Antigravity")
-    app.setOrganizationDomain("antigravity.ai")
+    app.setOrganizationName("Mariano Muñoz")
+    app.setOrganizationDomain("SFTP_Mounter")
 
-    # Comprobar si ya existe otra instancia de la aplicación mediante QLockFile
+    # Check if another instance of the application is already running using QLockFile
     from PySide6.QtCore import QLockFile, QDir
     from PySide6.QtWidgets import QMessageBox
     
@@ -112,31 +111,30 @@ def main():
         QMessageBox.warning(
             None,
             "SFTP Mounter",
-            "Ya existe otra instancia de SFTP_Mounter en ejecución."
+            "Another instance of SFTP Mounter is already running."
         )
         sys.exit(0)
 
-    # Si se obtuvo el bloqueo, procedemos a configurar los logs y el resto de la aplicación
+    # If the lock was acquired, proceed to configure logging and the rest of the application
     setup_logging()
 
-    # Forzar el uso del estilo de diseño 'Fusion' de Qt, que ofrece
-    # una apariencia moderna y consistente en todas las plataformas soportadas.
+    # Force the use of Qt's 'Fusion' design style, which offers
+    # a modern and consistent appearance across all supported platforms.
     app.setStyle('Fusion')
 
-    # Inicializar la ventana principal pasándole la instancia de la aplicación
+    # Initialize the main window by passing the application instance
     window = MainWindow(app)
     
-    # Evaluar si la aplicación debe iniciar minimizada directamente en la bandeja del sistema.
-    # Útil cuando la aplicación está configurada para autoiniciar con el sistema operativo (autostart).
+    # Evaluate whether the application should start minimized directly in the system tray.
+    # Useful when the application is configured to autostart with the operating system.
     start_minimized = "--minimized" in sys.argv
     if not start_minimized:
         window.show()
     else:
         logging.info("Starting minimized in system tray.")
 
-    # Ejecutar el bucle de eventos principal de Qt
+    # Run the main Qt event loop
     sys.exit(app.exec())
 
 if __name__ == '__main__':
     main()
-

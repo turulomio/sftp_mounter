@@ -2,7 +2,7 @@
 name = "sftp-mounter"
 version = "1.0.0"
 description = "A simple Qt6 GUI tool to mount SFTP servers as network drives on Windows 11 using Rclone and WinFsp."
-authors = ["Antigravity <info@antigravity.ai>"]
+authors = ["turulomio <turulomio@yahoo.es>"]
 readme = "README.md"
 packages = [{include = "sftp_mounter"}]
 

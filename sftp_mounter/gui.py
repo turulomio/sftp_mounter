@@ -1,18 +1,18 @@
 """
-Interfaz gráfica de usuario (GUI) para SFTP Mounter basada en PySide6.
+Graphical User Interface (GUI) for SFTP Mounter based on PySide6.
 
-Este módulo define la ventana principal de la aplicación (`MainWindow`), que implementa:
-1. Un formulario completo para perfiles SFTP (servidor, puerto, credenciales de contraseña y clave SSH).
-2. Un diseño visual premium en modo oscuro utilizando QSS (Qt Style Sheets).
-3. Mecanismos de interacción asíncrona mediante señales y slots de Qt.
-4. Integración con la bandeja del sistema (System Tray Icon) para minimizar y cerrar en segundo plano.
-5. Persistencia de ajustes globales como el inicio automático en Windows a través del registro.
+This module defines the main window of the application (`MainWindow`), which implements:
+1. A complete form for SFTP profiles (host, port, credentials for password and SSH key).
+2. A premium visual design in dark mode using QSS (Qt Style Sheets).
+3. Asynchronous interaction mechanisms using Qt signals and slots.
+4. System tray integration (System Tray Icon) to minimize and close in the background.
+5. Persistence of global settings such as auto-start in Windows via the registry.
 
-Para nuevos desarrolladores:
-- PySide6 funciona mediante un sistema de hilos y bucle de eventos. Las operaciones pesadas
-  se invocan a través de la clase `Mounter` que delega en subprocesos para no congelar la UI.
-- La estética se maneja mediante el string `QSS_STYLE`. Modifica este string si necesitas
-  personalizar fuentes, colores o márgenes.
+For new developers:
+- PySide6 works via a system of threads and event loops. Heavy operations
+  are invoked via the `Mounter` class which delegates to subprocesses so as not to freeze the UI.
+- The aesthetics are handled via the `QSS_STYLE` string. Modify this string if you need
+  to customize fonts, colors, or margins.
 """
 
 import os
@@ -370,7 +370,7 @@ class LogViewerDialog(QDialog):
             if was_at_bottom:
                 scrollbar.setValue(scrollbar.maximum())
         except Exception as e:
-            self.txt_log.setPlainText(f"Error al leer el archivo de logs: {e}")
+            self.txt_log.setPlainText(self.i18n.t('log_read_error', error=str(e)))
 
     def clear_log(self):
         if not self.log_path:
@@ -381,7 +381,7 @@ class LogViewerDialog(QDialog):
             self.load_log_content()
             QMessageBox.information(self, self.i18n.t('log_viewer_title'), self.i18n.t('log_cleared_msg'))
         except Exception as e:
-            QMessageBox.critical(self, self.i18n.t('log_viewer_title'), f"Error al limpiar logs: {e}")
+            QMessageBox.critical(self, self.i18n.t('log_viewer_title'), self.i18n.t('log_clear_error', error=str(e)))
 
     def copy_log(self):
         from PySide6.QtWidgets import QApplication
@@ -452,13 +452,13 @@ class KnownHostsViewerDialog(QDialog):
                 content = f.read()
             self.txt_content.setPlainText(content if content.strip() else self.i18n.t('known_hosts_not_found'))
         except Exception as e:
-            self.txt_content.setPlainText(f"Error al leer known_hosts: {e}")
+            self.txt_content.setPlainText(f"Error reading known_hosts: {e}")
 
 
 class ProfileManagerDialog(QDialog):
     """
-    Diálogo para crear, editar y eliminar perfiles SFTP de manera dedicada.
-    Presenta una lista de perfiles a la izquierda y el formulario de edición a la derecha.
+    Dialog to create, edit, and delete SFTP profiles in a dedicated way.
+    Presents a list of profiles on the left and the edit form on the right.
     """
     def __init__(self, parent=None, config_manager=None, i18n=None, active_mounts=None, initial_profile=None):
         super().__init__(parent)
@@ -745,7 +745,7 @@ class ProfileManagerDialog(QDialog):
         name = name.strip()
         profiles = self.config_manager.load_profiles()
         if name in profiles:
-            QMessageBox.warning(self, self.i18n.t('error_save_title'), f"El perfil '{name}' ya existe.")
+            QMessageBox.warning(self, self.i18n.t('error_save_title'), self.i18n.t('profile_exists', profile_name=name))
             return
 
         self.clear_form()
@@ -821,14 +821,14 @@ class ProfileManagerDialog(QDialog):
             'auto_mount': self.chk_auto_mount.isChecked()
         }
 
-        # Si se cambió el nombre de un perfil existente, eliminar el viejo
+        # If the name of an existing profile was changed, delete the old one
         if self.current_editing_profile and self.current_editing_profile != name:
             self.config_manager.delete_profile(self.current_editing_profile)
 
         if self.config_manager.save_profile(name, profile_data):
             self.current_editing_profile = name
             self.load_profile_list()
-            # Seleccionar el ítem recién guardado
+            # Select the newly saved item
             items = self.lst_profiles.findItems(name, Qt.MatchExactly)
             if items:
                 self.lst_profiles.setCurrentItem(items[0])
@@ -837,18 +837,141 @@ class ProfileManagerDialog(QDialog):
             QMessageBox.critical(self, self.i18n.t('error_save_title'), self.i18n.t('error_save_failed'))
 
 
+class SettingsDialog(QDialog):
+    """
+    Dialog to configure global application settings:
+    language, auto-start with Windows, minimize on close, and showing connection string in drive name.
+    """
+    def __init__(self, parent=None, config_manager=None, i18n=None, main_window=None):
+        super().__init__(parent)
+        self.config_manager = config_manager
+        self.i18n = i18n
+        self.main_window = main_window
+
+        self.setWindowTitle(self.i18n.t('menu_settings') or "Settings")
+        self.setMinimumSize(420, 320)
+        self.setStyleSheet(QSS_STYLE)
+
+        self.init_ui()
+        self.load_settings()
+
+    def init_ui(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(15)
+
+        form_frame = QFrame()
+        form_frame.setObjectName("cardFrame")
+        form_layout = QGridLayout(form_frame)
+        form_layout.setContentsMargins(15, 15, 15, 15)
+        form_layout.setSpacing(12)
+
+        # Language
+        self.lbl_lang = QLabel(self.i18n.t('menu_language') or "Language")
+        self.cmb_lang = QComboBox()
+        for lang_code, lang_name in SUPPORTED_LANGUAGES.items():
+            self.cmb_lang.addItem(lang_name, lang_code)
+        form_layout.addWidget(self.lbl_lang, 0, 0)
+        form_layout.addWidget(self.cmb_lang, 0, 1)
+
+        # Start with Windows
+        self.chk_start_with_win = QCheckBox(self.i18n.t('start_with_win') or "Start with Windows")
+        form_layout.addWidget(self.chk_start_with_win, 1, 0, 1, 2)
+
+        # Minimize on close
+        self.chk_minimize_to_tray = QCheckBox(self.i18n.t('minimize_to_tray') or "Minimize on close")
+        form_layout.addWidget(self.chk_minimize_to_tray, 2, 0, 1, 2)
+
+        # Connection string in drive name
+        self.chk_conn_in_volname = QCheckBox(self.i18n.t('conn_in_volname') or "Connection string in drive name")
+        form_layout.addWidget(self.chk_conn_in_volname, 3, 0, 1, 2)
+
+        main_layout.addWidget(form_frame)
+
+        # Buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        self.btn_save = QPushButton(self.i18n.t('save') or "Save")
+        self.btn_save.setObjectName("btnPrimary")
+        self.btn_save.clicked.connect(self.on_save_clicked)
+        btn_layout.addWidget(self.btn_save)
+
+        self.btn_cancel = QPushButton(self.i18n.t('cancel') or "Cancel")
+        self.btn_cancel.setObjectName("btnSecondary")
+        self.btn_cancel.clicked.connect(self.reject)
+        btn_layout.addWidget(self.btn_cancel)
+
+        main_layout.addLayout(btn_layout)
+
+    def load_settings(self):
+        settings = self.config_manager.load_settings()
+        
+        # 1. Language
+        current_lang = self.i18n.get_language()
+        idx = self.cmb_lang.findData(current_lang)
+        if idx >= 0:
+            self.cmb_lang.setCurrentIndex(idx)
+
+        # 2. Start with Windows
+        start_with_win = self.main_window.get_startup_registry()
+        self.chk_start_with_win.setChecked(start_with_win)
+
+        # 3. Minimize on close
+        min_to_tray = settings.get('minimize_to_tray', True)
+        self.chk_minimize_to_tray.setChecked(min_to_tray)
+
+        # 4. Connection string in drive name
+        conn_in_volname = settings.get('conn_in_volname', False)
+        self.chk_conn_in_volname.setChecked(conn_in_volname)
+
+    def on_save_clicked(self):
+        settings = self.config_manager.load_settings()
+        
+        # Save language
+        new_lang = self.cmb_lang.currentData()
+        if new_lang != self.i18n.get_language():
+            self.i18n.set_language(new_lang)
+            settings['language'] = new_lang
+            self.main_window.retranslate_ui()
+
+        # Save Start with Windows
+        chk_win = self.chk_start_with_win.isChecked()
+        if chk_win != self.main_window.get_startup_registry():
+            success = self.main_window.set_startup_registry(chk_win)
+            if success:
+                settings['start_with_windows'] = chk_win
+            else:
+                QMessageBox.critical(
+                    self, self.main_window.i18n.t('config_error_title'), self.main_window.i18n.t('config_error_msg')
+                )
+
+        # Save Minimize on close
+        settings['minimize_to_tray'] = self.chk_minimize_to_tray.isChecked()
+
+        # Save Connection string in drive name
+        settings['conn_in_volname'] = self.chk_conn_in_volname.isChecked()
+
+        self.config_manager.save_settings(settings)
+        
+        # Synchronize and force UI reload on MainWindow
+        self.main_window.load_profiles_dashboard()
+        self.main_window.load_global_settings()
+        
+        self.accept()
+
+
 class MainWindow(QWidget):
     """
-    Ventana principal de la aplicación. Administra los controles visuales,
-    la validación de los formularios de conexión y los eventos del sistema (bandeja, inicio, etc.).
+    Main window of the application. Manages visual controls,
+    connection form validation, and system events (tray, startup, etc.).
     """
     def __init__(self, app):
         """
-        Inicializa la interfaz gráfica, enlaza los gestores de configuración y montaje,
-        y programa el auto-montaje inicial si corresponde.
+        Initializes the graphical interface, binds config and mount managers,
+        and schedules the initial auto-mount if applicable.
         
         Args:
-            app (QApplication): Instancia de la aplicación Qt en ejecución.
+            app (QApplication): Running Qt application instance.
         """
         super().__init__()
         self.app = app
@@ -858,7 +981,7 @@ class MainWindow(QWidget):
         # Cargar idioma preferido de la configuración o detectar automáticamente
         settings = self.config_manager.load_settings()
         saved_lang = settings.get('language', '')
-        self.i18n = I18N(default_lang=saved_lang if saved_lang else 'es')
+        self.i18n = I18N(default_lang=saved_lang if saved_lang else 'en')
         
         # Variables de estado interno
         self.is_connecting = False         # Flag para bloquear re-intentos de conexión
@@ -911,35 +1034,10 @@ class MainWindow(QWidget):
 
         self.menu_options.addSeparator()
 
-        # Iniciar con Windows
-        self.act_start_with_win = QAction(self)
-        self.act_start_with_win.setCheckable(True)
-        self.act_start_with_win.triggered.connect(self.on_start_with_windows_changed)
-        self.menu_options.addAction(self.act_start_with_win)
-        
-        # Minimizar al cerrar
-        self.act_minimize_to_tray = QAction(self)
-        self.act_minimize_to_tray.setCheckable(True)
-        self.act_minimize_to_tray.triggered.connect(self.on_minimize_to_tray_changed)
-        self.menu_options.addAction(self.act_minimize_to_tray)
-        
-        self.menu_options.addSeparator()
-        
-        # Idioma Submenu
-        self.menu_language = QMenu(self)
-        self.menu_options.addMenu(self.menu_language)
-        
-        self.lang_action_group = QActionGroup(self)
-        self.lang_action_group.setExclusive(True)
-        self.lang_action_group.triggered.connect(self.on_menu_language_triggered)
-        self.lang_actions = {}
-        for lang_code, lang_name in SUPPORTED_LANGUAGES.items():
-            action = QAction(lang_name, self)
-            action.setCheckable(True)
-            action.setActionGroup(self.lang_action_group)
-            action.setData(lang_code)
-            self.menu_language.addAction(action)
-            self.lang_actions[lang_code] = action
+        # Configuración / Settings
+        self.act_settings = QAction(self)
+        self.act_settings.triggered.connect(self.on_open_settings)
+        self.menu_options.addAction(self.act_settings)
             
         # Ayuda Menu
         self.menu_help = QMenu(self)
@@ -1100,7 +1198,7 @@ class MainWindow(QWidget):
 
     def update_card_status(self, profile_name):
         """
-        Actualiza el aspecto de una tarjeta de perfil según si la unidad correspondiente está montada.
+        Updates the appearance of a profile card based on whether the corresponding drive is mounted.
         """
         card = self.profile_cards.get(profile_name)
         if not card:
@@ -1127,8 +1225,8 @@ class MainWindow(QWidget):
 
     def on_card_action_clicked(self, profile_name):
         """
-        Gatillado al pulsar el botón de acción en la tarjeta de un perfil.
-        Si la unidad está montada, la desconecta. De lo contrario, la conecta.
+        Triggered when clicking the action button on a profile card.
+        If the drive is mounted, it disconnects it. Otherwise, it connects it.
         """
         card = self.profile_cards.get(profile_name)
         if not card:
@@ -1137,7 +1235,7 @@ class MainWindow(QWidget):
         profile = card['profile']
         drive = profile.get('drive_letter', '')
 
-        # Evitar cliquear si ya hay un proceso activo para este perfil
+        # Avoid clicking if there is already an active process for this profile
         if profile_name in self.active_workers:
             return
 
@@ -1161,7 +1259,7 @@ class MainWindow(QWidget):
             card['btn_action'].setEnabled(False)
             self.app.processEvents()
 
-            self.log_action(profile_name, f"Iniciando conexión/montaje en {drive.upper()}")
+            self.log_action(profile_name, f"Starting connection/mount on {drive.upper()}")
             
             worker = MountWorker(self.mounter, profile)
             self.active_workers[profile_name] = worker
@@ -1175,7 +1273,7 @@ class MainWindow(QWidget):
             return
 
         if success:
-            self.log_action(profile_name, f"Unidad {drive.upper()} desmontada con éxito")
+            self.log_action(profile_name, f"Drive {drive.upper()} unmounted successfully")
             self.tray_icon.showMessage(
                 "SFTP Drive Mounter",
                 self.i18n.t('disconnection_ok_msg', drive=drive.upper()),
@@ -1183,7 +1281,7 @@ class MainWindow(QWidget):
                 2000
             )
         else:
-            self.log_action(profile_name, f"Error al desmontar la unidad {drive.upper()}")
+            self.log_action(profile_name, f"Error unmounting drive {drive.upper()}")
             QMessageBox.warning(self, self.i18n.t('unmount_warning_title'), self.i18n.t('unmount_warning_msg'))
 
         self.update_card_status(profile_name)
@@ -1197,13 +1295,13 @@ class MainWindow(QWidget):
 
         drive = profile.get('drive_letter', '')
 
-        # Si falla debido a verificación de clave de host SSH (host key verification/unknown host)
+        # If it fails due to SSH host key verification (host key verification/unknown host)
         is_host_key_error = any(term in message.lower() for term in [
             "host key", "key verification", "hostkey", "host key fingerprint", "strictly host key checking", "knownhosts", "key is unknown"
         ]) and "no host key validation is being performed" not in message.lower()
 
         if not success and is_host_key_error:
-            self.log_action(profile_name, f"Fallo por clave de host desconocida. Solicitando confirmación al usuario.")
+            self.log_action(profile_name, f"Failed due to unknown host key. Requesting user confirmation.")
             reply = QMessageBox.question(
                 self,
                 self.i18n.t('host_key_unknown_title'),
@@ -1211,13 +1309,13 @@ class MainWindow(QWidget):
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.Yes:
-                self.log_action(profile_name, f"Usuario aceptó la clave de host. Intentando añadir clave a known_hosts...")
+                self.log_action(profile_name, f"User accepted host key. Attempting to add key to known_hosts...")
                 added = self.mounter.add_to_known_hosts(profile.get('host'), profile.get('port', 22))
                 
                 card['lbl_status'].setText(self.i18n.t('status_connecting'))
                 self.app.processEvents()
                 
-                # Lanzar un segundo MountWorker con accept_host_key=True
+                # Launch a second MountWorker with accept_host_key=True
                 worker = MountWorker(self.mounter, profile, accept_host_key=True)
                 self.active_workers[profile_name] = worker
                 worker.finished.connect(lambda s, m, p=profile, pn=profile_name: self.on_mount_finished(s, m, p, pn))
@@ -1225,7 +1323,7 @@ class MainWindow(QWidget):
                 return
 
         if success:
-            self.log_action(profile_name, f"Montaje en {drive.upper()} completado y verificado con éxito")
+            self.log_action(profile_name, f"Mount on {drive.upper()} completed and verified successfully")
             self.tray_icon.showMessage(
                 "SFTP Drive Mounter",
                 self.i18n.t('connection_ok_msg', drive=drive.upper()),
@@ -1233,7 +1331,7 @@ class MainWindow(QWidget):
                 3000
             )
         else:
-            self.log_action(profile_name, f"Error al realizar montaje en {drive.upper()}: {message}")
+            self.log_action(profile_name, f"Error performing mount on {drive.upper()}: {message}")
             display_msg = message
             if "already in use" in message or "ya está en uso" in message:
                 display_msg = self.i18n.t('net_use_in_use', drive=drive.upper())
@@ -1259,7 +1357,7 @@ class MainWindow(QWidget):
 
     def on_edit_profile_clicked(self, profile_name):
         """
-        Abre el diálogo de gestión de perfiles con un perfil específico seleccionado por defecto.
+        Opens the profile management dialog with a specific profile selected by default.
         """
         dialog = ProfileManagerDialog(
             parent=self,
@@ -1273,7 +1371,7 @@ class MainWindow(QWidget):
 
     def on_open_log_viewer(self):
         """
-        Abre la ventana independiente no modal del visor de logs.
+        Opens the independent non-modal log viewer window.
         """
         if self.log_viewer is None or not self.log_viewer.isVisible():
             self.log_viewer = LogViewerDialog(parent=self, log_path=self.log_path, i18n=self.i18n)
@@ -1284,7 +1382,7 @@ class MainWindow(QWidget):
 
     def on_open_known_hosts_viewer(self):
         """
-        Abre la ventana independiente no modal del visor de known_hosts.
+        Opens the independent non-modal known_hosts viewer window.
         """
         if self.known_hosts_viewer is None or not self.known_hosts_viewer.isVisible():
             self.known_hosts_viewer = KnownHostsViewerDialog(parent=self, i18n=self.i18n)
@@ -1297,7 +1395,7 @@ class MainWindow(QWidget):
 
     def log_action(self, profile_name: str, message: str):
         """
-        Registra un evento de montaje en el archivo de logs con formato datetime(formato iso) Nombre del montaje y log.
+        Registers a mount event in the log file with ISO datetime format, mount name, and log message.
         """
         import datetime
         try:
@@ -1320,10 +1418,8 @@ class MainWindow(QWidget):
         self.act_manage_profiles.setText(self.i18n.t('manage_profiles'))
         self.act_view_log.setText(self.i18n.t('menu_view_log'))
         self.act_view_known_hosts.setText(self.i18n.t('menu_view_known_hosts'))
+        self.act_settings.setText(self.i18n.t('menu_settings'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
-        self.act_start_with_win.setText(self.i18n.t('start_with_win'))
-        self.act_minimize_to_tray.setText(self.i18n.t('minimize_to_tray'))
-        self.menu_language.setTitle(self.i18n.t('menu_language'))
         self.act_about.setText(self.i18n.t('about'))
 
         self.check_winfsp_status()
@@ -1346,11 +1442,11 @@ class MainWindow(QWidget):
 
     def populate_drive_letters(self):
         """
-        Llena el selector de unidades de red (ComboBox) con las letras libres de Windows.
+        Fills the network drive selector (ComboBox) with available Windows drive letters.
         
-        Escanea de forma descendente (de la Z: a la D:) omitiendo las letras de volumen
-        que ya se encuentren ocupadas por el sistema (ej. discos duros, lectores USB).
-        En sistemas UNIX, añade rutas de montaje por defecto dentro del directorio del usuario.
+        Scans downwards (from Z: to D:) omitting drive letters
+        already occupied by the system (e.g. hard drives, USB readers).
+        In UNIX systems, adds default mount paths inside the user's home directory.
         """
         self.cmb_drive_letter.clear()
         for char in range(ord('Z'), ord('C'), -1):
@@ -1360,8 +1456,8 @@ class MainWindow(QWidget):
 
     def load_profiles_into_combo(self):
         """
-        Consulta el gestor de configuración para recuperar los perfiles y cargarlos en la interfaz.
-        Siempre añade la opción '<Nuevo Perfil>' (traducida) en el primer índice.
+        Queries the config manager to retrieve profiles and load them into the interface.
+        Always adds the '<New Profile>' option (translated) at the first index.
         """
         self.cmb_profiles.blockSignals(True)
         self.cmb_profiles.clear()
@@ -1374,16 +1470,16 @@ class MainWindow(QWidget):
 
     def on_profile_selection_changed(self, index):
         """
-        Slot gatillado cuando el usuario selecciona un perfil diferente de la lista.
+        Slot triggered when the user selects a different profile from the list.
         
-        Si se selecciona el primer elemento (índice <= 0), se limpian los campos del formulario.
-        En caso contrario, se cargan y completan los datos del perfil seleccionado.
+        If the first item is selected (index <= 0), form fields are cleared.
+        Otherwise, connection data for the selected profile is loaded.
         
         Args:
-            index (int): Índice seleccionado en el ComboBox de perfiles.
+            index (int): Selected index in the profiles ComboBox.
         """
         if index <= 0:
-            # Limpiar entradas para un perfil nuevo
+            # Clear inputs for a new profile
             self.txt_host.clear()
             self.txt_port.setText("22")
             self.txt_user.clear()
@@ -1452,7 +1548,7 @@ class MainWindow(QWidget):
             self.lbl_key_path.setVisible(True)
             self.txt_key_path.setVisible(True)
             self.btn_browse_key.setVisible(True)
-        elif index == 2:  # Llave + Frase de paso
+        elif index == 2:  # Key + Passphrase
             self.lbl_password.setText(self.i18n.t('passphrase'))
             self.lbl_password.setVisible(True)
             self.txt_password.setVisible(True)
@@ -1462,8 +1558,7 @@ class MainWindow(QWidget):
 
     def on_browse_key_clicked(self):
         """
-        Abre un cuadro de diálogo del explorador de archivos nativo de Qt 
-        para que el usuario seleccione la ruta de su llave privada SSH.
+        Opens a native Qt file dialog to let the user select their private SSH key path.
         """
         file_path, _ = QFileDialog.getOpenFileName(
             self, self.i18n.t('ssh_key'), "", "All Files (*);;Key Files (*.pem *.key id_rsa)"
@@ -1473,10 +1568,10 @@ class MainWindow(QWidget):
 
     def get_current_form_data(self):
         """
-        Recopila todos los datos ingresados en el formulario de la UI.
+        Collects all data entered in the UI form.
         
         Returns:
-            dict: Parámetros listos para su persistencia o procesamiento.
+            dict: Parameters ready for persistence or processing.
         """
         idx = self.cmb_auth_type.currentIndex()
         
@@ -1511,8 +1606,8 @@ class MainWindow(QWidget):
 
     def on_save_profile_clicked(self):
         """
-        Valida y almacena los datos actuales del formulario como un perfil guardado.
-        Si es un perfil nuevo, solicita un nombre descriptivo al usuario mediante un QInputDialog.
+        Validates and saves current form data as a connection profile.
+        If it is a new profile, requests a name from the user via QInputDialog.
         """
         profile_name = self.cmb_profiles.currentText()
         if profile_name == self.i18n.t('new_profile') or not profile_name.strip():
@@ -1543,7 +1638,7 @@ class MainWindow(QWidget):
 
     def on_delete_profile_clicked(self):
         """
-        Elimina de forma permanente el perfil de conexión que está seleccionado.
+        Permanently deletes the selected connection profile.
         """
         profile_name = self.cmb_profiles.currentText()
         if profile_name == self.i18n.t('new_profile'):
@@ -1703,7 +1798,7 @@ class MainWindow(QWidget):
         Intercepta los eventos de cambio de estado de la ventana en PySide6.
         """
         if event.type() == event.type().WindowStateChange:
-            if self.isMinimized() and self.act_minimize_to_tray.isChecked():
+            if self.isMinimized() and getattr(self, 'minimize_to_tray', True):
                 self.hide()
                 event.ignore()
                 self.tray_icon.showMessage(
@@ -1718,7 +1813,7 @@ class MainWindow(QWidget):
         """
         Intercepta el evento de cierre de ventana.
         """
-        if self.act_minimize_to_tray.isChecked() and len(self.mounter.active_mounts) > 0:
+        if getattr(self, 'minimize_to_tray', True) and len(self.mounter.active_mounts) > 0:
             self.hide()
             event.ignore()
             self.tray_icon.showMessage(
@@ -1733,67 +1828,27 @@ class MainWindow(QWidget):
     # ----------------- GLOBAL SETTINGS & AUTOSTART (REGISTRO DE WINDOWS) -----------------
     def load_global_settings(self):
         """
-        Carga la configuración global desde el config_manager y la aplica a los controles de la UI.
+        Carga la configuración global desde el config_manager.
         """
         settings = self.config_manager.load_settings()
         
         # 1. Minimizar a la bandeja (por defecto True)
-        min_to_tray = settings.get('minimize_to_tray', True)
-        self.act_minimize_to_tray.setChecked(min_to_tray)
+        self.minimize_to_tray = settings.get('minimize_to_tray', True)
         
         # 2. Iniciar con Windows (leer del registro de Windows)
         start_with_win = self.get_startup_registry()
-        self.act_start_with_win.setChecked(start_with_win)
-        
-        # Sincronizar el selector de idioma en el menú
-        current_lang = self.i18n.get_language()
-        if current_lang in self.lang_actions:
-            self.lang_actions[current_lang].setChecked(True)
         
         # Sincronizar el archivo JSON
         if start_with_win != settings.get('start_with_windows'):
             settings['start_with_windows'] = start_with_win
             self.config_manager.save_settings(settings)
 
-    def on_minimize_to_tray_changed(self):
+    def on_open_settings(self):
         """
-        Slot gatillado cuando se altera la casilla 'Minimizar al cerrar'.
+        Abre el diálogo de configuración global de la aplicación (Settings).
         """
-        settings = self.config_manager.load_settings()
-        settings['minimize_to_tray'] = self.act_minimize_to_tray.isChecked()
-        self.config_manager.save_settings(settings)
-
-    def on_start_with_windows_changed(self):
-        """
-        Slot gatillado cuando se activa/desactiva la casilla 'Iniciar con Windows'.
-        """
-        checked = self.act_start_with_win.isChecked()
-        success = self.set_startup_registry(checked)
-        if success:
-            settings = self.config_manager.load_settings()
-            settings['start_with_windows'] = checked
-            self.config_manager.save_settings(settings)
-        else:
-            self.act_start_with_win.setChecked(not checked)
-            QMessageBox.critical(
-                self, self.i18n.t('config_error_title'), self.i18n.t('config_error_msg')
-            )
-
-    def on_menu_language_triggered(self, action):
-        """
-        Slot gatillado cuando el usuario cambia el idioma seleccionado en el menú.
-        """
-        lang_code = action.data()
-        if lang_code:
-            self.i18n.set_language(lang_code)
-            
-            # Guardar ajuste persistente
-            settings = self.config_manager.load_settings()
-            settings['language'] = lang_code
-            self.config_manager.save_settings(settings)
-            
-            # Forzar re-traducción de la UI
-            self.retranslate_ui()
+        dialog = SettingsDialog(self, self.config_manager, self.i18n, self)
+        dialog.exec()
 
     def on_about_clicked(self):
         """
@@ -1817,7 +1872,7 @@ class MainWindow(QWidget):
             f"• {self.i18n.t('author')}<br>"
             f"• {self.i18n.t('license')}<br>"
             f"• {self.i18n.t('project_url', url=github_link)}<br><br>"
-            "<i>Turulomio &copy; 2026</i>"
+            "<i>Mariano Muñoz &copy; 2026</i>"
         )
         
         QMessageBox.about(self, self.i18n.t('about'), msg)
@@ -1872,8 +1927,8 @@ class MainWindow(QWidget):
 
     def perform_auto_mount(self):
         """
-        Escanea la colección de perfiles almacenados e inicia el montaje de todos los perfiles
-        que tengan marcada la casilla de 'Autoconectar' (auto_mount = True) de forma secuencial.
+        Scans the connection profiles and starts mounting all profiles
+        with auto-mount enabled sequentially.
         """
         if not self.mounter.is_winfsp_installed():
             logger.warning("Auto-mount aborted because WinFsp is not installed.")
@@ -1885,7 +1940,7 @@ class MainWindow(QWidget):
 
     def process_auto_mount_queue(self):
         """
-        Procesa de forma secuencial y no bloqueante la cola de perfiles a auto-conectar.
+        Processes the auto-mount queue sequentially in a non-blocking way.
         """
         if not hasattr(self, 'auto_mount_queue') or not self.auto_mount_queue:
             return
@@ -1893,7 +1948,7 @@ class MainWindow(QWidget):
         profile = self.auto_mount_queue.pop(0)
         logger.info(f"Auto-mounting profile for host: {profile.get('host')}")
         
-        # Buscar el nombre del perfil
+        # Find the profile name
         profiles = self.config_manager.load_profiles()
         target_name = None
         for name, p in profiles.items():
