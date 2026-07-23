@@ -3,8 +3,6 @@
 [![OS: Windows](https://img.shields.io/badge/OS-Windows%2010%20%2F%2011-blue?logo=windows)](https://www.microsoft.com/windows)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/turulomio/sftp_mounter/total?logo=github)](https://github.com/turulomio/sftp_mounter/releases)
-[![Python: >=3.10](https://img.shields.io/badge/Python->=3.10-blue.svg?logo=python)](https://python.org)
-[![GUI: PySide6 / Qt6](https://img.shields.io/badge/GUI-PySide6%20%2F%20Qt6-teal.svg?logo=qt)](https://www.qt.io/)
 
 **SFTP Mounter** is a simple, lightweight, and modern Qt6/PySide6 graphical user interface designed to mount SFTP servers as native network drives on **Windows 10/11** using **Rclone** and **WinFsp**.
 
