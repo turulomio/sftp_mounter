@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sftp-mounter"
-version = "1.0.0"
+version = "1.2.0"
 description = "A simple Qt6 GUI tool to mount SFTP servers as network drives on Windows 11 using Rclone and WinFsp."
 authors = ["turulomio <turulomio@yahoo.es>"]
 readme = "README.md"
@@ -26,6 +26,7 @@ setup-wine-python = [
 ]
 build-windows-wine = { cmd = "wine python sftp_mounter/package.py" }
 run-wine = { cmd = "wine python sftp_mounter/main.py" }
+release = { script = "sftp_mounter.release_info:print_release_steps" }
 
 
 [build-system]
