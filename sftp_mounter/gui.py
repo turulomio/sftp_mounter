@@ -1872,7 +1872,7 @@ class MainWindow(QWidget):
             f"• {self.i18n.t('author')}<br>"
             f"• {self.i18n.t('license')}<br>"
             f"• {self.i18n.t('project_url', url=github_link)}<br><br>"
-            "<i>Turulomio &copy; 2026</i>"
+            "<i>Mariano Muñoz &copy; 2026</i>"
         )
         
         QMessageBox.about(self, self.i18n.t('about'), msg)

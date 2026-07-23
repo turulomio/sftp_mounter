@@ -17,6 +17,7 @@ A simple Qt6 GUI tool to mount SFTP connections as network drives on Windows 11 
 *   **Inicio Automático:** Opción de arrancar con Windows en segundo plano.
 *   **Minimizado a la Bandeja (Tray):** Oculta la aplicación en la barra de tareas al cerrar o minimizar para mantener el SFTP montado.
 *   **Instancia Única Protegida:** Implementa un mecanismo de prevención mediante `QLockFile` para evitar la ejecución simultánea de múltiples instancias y sus consecuentes conflictos de bloqueo en archivos de log.
+*   **Conexiones No Persistentes (Temporales):** Los montajes son transitorios y no se registran permanentemente en Windows. Si una unidad queda en estado "desconectado" o no es eliminada debido a configuraciones específicas del usuario, desaparecerá automáticamente al reiniciar el sistema.
 
 ## Requisitos de Desarrollo
 
@@ -55,16 +56,16 @@ El ejecutable compilado estará disponible en la carpeta raíz en `dist/SFTPMoun
 # RUTA DE ARCHIVOS EN WINDOWS 11
 
 ## Logs
-C:\Users\antigravity\AppData\Roaming\SFTPMounter\app.log
+C:\Users\mariano\AppData\Roaming\SFTPMounter\app.log
 
 ## Configuración
-C:\Users\antigravity\AppData\Roaming\SFTPMounter\config.json
+C:\Users\mariano\AppData\Roaming\SFTPMounter\config.json
 
 ## Binarios
-C:\Users\antigravity\AppData\Roaming\SFTPMounter\bin\rclone.exe
-C:\Users\antigravity\AppData\Roaming\SFTPMounter\bin\winfsp.msi
+C:\Users\mariano\AppData\Roaming\SFTPMounter\bin\rclone.exe
+C:\Users\mariano\AppData\Roaming\SFTPMounter\bin\winfsp.msi
 
 ## SSH known_hosts
-C:\Users\antigravity\.ssh\known_hosts
+C:\Users\mariano\.ssh\known_hosts
 
 Actualmente no se almacena nada en known_hosts, Rclone no lo hace. Se emula haciendo una conexión a la ip y al puerto con herramientas como putty, ssh ... (PENDIENTE DE DESARROLLO)

@@ -97,8 +97,8 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("SFTP Drive Mounter")
     app.setApplicationVersion("1.0.0")
-    app.setOrganizationName("Antigravity")
-    app.setOrganizationDomain("antigravity.ai")
+    app.setOrganizationName("Mariano Muñoz")
+    app.setOrganizationDomain("SFTP_Mounter")
 
     # Check if another instance of the application is already running using QLockFile
     from PySide6.QtCore import QLockFile, QDir

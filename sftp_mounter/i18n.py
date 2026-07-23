@@ -642,10 +642,10 @@ TRANSLATIONS = {
         'ro': 'Licență: GPLv3'
     },
     'author': {
-        'es': 'Autor: turulomio', 'en': 'Author: turulomio', 'fr': 'Auteur: turulomio',
-        'pt': 'Autor: turulomio', 'de': 'Autor: turulomio', 'it': 'Autore: turulomio',
-        'hi': 'लेखक: turulomio', 'zh': '作者: turulomio', 'ru': 'Автор: turulomio',
-        'ro': 'Autor: turulomio'
+        'es': 'Autor: Mariano Muñoz', 'en': 'Author: Mariano Muñoz', 'fr': 'Auteur: Mariano Muñoz',
+        'pt': 'Autor: Mariano Muñoz', 'de': 'Autor: Mariano Muñoz', 'it': 'Autore: Mariano Muñoz',
+        'hi': 'लेखक: Mariano Muñoz', 'zh': '作者: Mariano Muñoz', 'ru': 'Автор: Mariano Muñoz',
+        'ro': 'Autor: Mariano Muñoz'
     },
     'project_url': {
         'es': 'Proyecto: {url}', 'en': 'Project: {url}', 'fr': 'Projet: {url}',
