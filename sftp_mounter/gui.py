@@ -370,7 +370,7 @@ class LogViewerDialog(QDialog):
             if was_at_bottom:
                 scrollbar.setValue(scrollbar.maximum())
         except Exception as e:
-            self.txt_log.setPlainText(f"Error al leer el archivo de logs: {e}")
+            self.txt_log.setPlainText(self.i18n.t('log_read_error', error=str(e)))
 
     def clear_log(self):
         if not self.log_path:
@@ -381,7 +381,7 @@ class LogViewerDialog(QDialog):
             self.load_log_content()
             QMessageBox.information(self, self.i18n.t('log_viewer_title'), self.i18n.t('log_cleared_msg'))
         except Exception as e:
-            QMessageBox.critical(self, self.i18n.t('log_viewer_title'), f"Error al limpiar logs: {e}")
+            QMessageBox.critical(self, self.i18n.t('log_viewer_title'), self.i18n.t('log_clear_error', error=str(e)))
 
     def copy_log(self):
         from PySide6.QtWidgets import QApplication
@@ -745,7 +745,7 @@ class ProfileManagerDialog(QDialog):
         name = name.strip()
         profiles = self.config_manager.load_profiles()
         if name in profiles:
-            QMessageBox.warning(self, self.i18n.t('error_save_title'), f"El perfil '{name}' ya existe.")
+            QMessageBox.warning(self, self.i18n.t('error_save_title'), self.i18n.t('profile_exists', profile_name=name))
             return
 
         self.clear_form()
@@ -962,16 +962,16 @@ class SettingsDialog(QDialog):
 
 class MainWindow(QWidget):
     """
-    Ventana principal de la aplicación. Administra los controles visuales,
-    la validación de los formularios de conexión y los eventos del sistema (bandeja, inicio, etc.).
+    Main window of the application. Manages visual controls,
+    connection form validation, and system events (tray, startup, etc.).
     """
     def __init__(self, app):
         """
-        Inicializa la interfaz gráfica, enlaza los gestores de configuración y montaje,
-        y programa el auto-montaje inicial si corresponde.
+        Initializes the graphical interface, binds config and mount managers,
+        and schedules the initial auto-mount if applicable.
         
         Args:
-            app (QApplication): Instancia de la aplicación Qt en ejecución.
+            app (QApplication): Running Qt application instance.
         """
         super().__init__()
         self.app = app
@@ -1198,7 +1198,7 @@ class MainWindow(QWidget):
 
     def update_card_status(self, profile_name):
         """
-        Actualiza el aspecto de una tarjeta de perfil según si la unidad correspondiente está montada.
+        Updates the appearance of a profile card based on whether the corresponding drive is mounted.
         """
         card = self.profile_cards.get(profile_name)
         if not card:
@@ -1225,8 +1225,8 @@ class MainWindow(QWidget):
 
     def on_card_action_clicked(self, profile_name):
         """
-        Gatillado al pulsar el botón de acción en la tarjeta de un perfil.
-        Si la unidad está montada, la desconecta. De lo contrario, la conecta.
+        Triggered when clicking the action button on a profile card.
+        If the drive is mounted, it disconnects it. Otherwise, it connects it.
         """
         card = self.profile_cards.get(profile_name)
         if not card:
@@ -1235,7 +1235,7 @@ class MainWindow(QWidget):
         profile = card['profile']
         drive = profile.get('drive_letter', '')
 
-        # Evitar cliquear si ya hay un proceso activo para este perfil
+        # Avoid clicking if there is already an active process for this profile
         if profile_name in self.active_workers:
             return
 
@@ -1259,7 +1259,7 @@ class MainWindow(QWidget):
             card['btn_action'].setEnabled(False)
             self.app.processEvents()
 
-            self.log_action(profile_name, f"Iniciando conexión/montaje en {drive.upper()}")
+            self.log_action(profile_name, f"Starting connection/mount on {drive.upper()}")
             
             worker = MountWorker(self.mounter, profile)
             self.active_workers[profile_name] = worker
@@ -1273,7 +1273,7 @@ class MainWindow(QWidget):
             return
 
         if success:
-            self.log_action(profile_name, f"Unidad {drive.upper()} desmontada con éxito")
+            self.log_action(profile_name, f"Drive {drive.upper()} unmounted successfully")
             self.tray_icon.showMessage(
                 "SFTP Drive Mounter",
                 self.i18n.t('disconnection_ok_msg', drive=drive.upper()),
@@ -1281,7 +1281,7 @@ class MainWindow(QWidget):
                 2000
             )
         else:
-            self.log_action(profile_name, f"Error al desmontar la unidad {drive.upper()}")
+            self.log_action(profile_name, f"Error unmounting drive {drive.upper()}")
             QMessageBox.warning(self, self.i18n.t('unmount_warning_title'), self.i18n.t('unmount_warning_msg'))
 
         self.update_card_status(profile_name)
@@ -1357,7 +1357,7 @@ class MainWindow(QWidget):
 
     def on_edit_profile_clicked(self, profile_name):
         """
-        Abre el diálogo de gestión de perfiles con un perfil específico seleccionado por defecto.
+        Opens the profile management dialog with a specific profile selected by default.
         """
         dialog = ProfileManagerDialog(
             parent=self,
@@ -1371,7 +1371,7 @@ class MainWindow(QWidget):
 
     def on_open_log_viewer(self):
         """
-        Abre la ventana independiente no modal del visor de logs.
+        Opens the independent non-modal log viewer window.
         """
         if self.log_viewer is None or not self.log_viewer.isVisible():
             self.log_viewer = LogViewerDialog(parent=self, log_path=self.log_path, i18n=self.i18n)
@@ -1382,7 +1382,7 @@ class MainWindow(QWidget):
 
     def on_open_known_hosts_viewer(self):
         """
-        Abre la ventana independiente no modal del visor de known_hosts.
+        Opens the independent non-modal known_hosts viewer window.
         """
         if self.known_hosts_viewer is None or not self.known_hosts_viewer.isVisible():
             self.known_hosts_viewer = KnownHostsViewerDialog(parent=self, i18n=self.i18n)
@@ -1395,7 +1395,7 @@ class MainWindow(QWidget):
 
     def log_action(self, profile_name: str, message: str):
         """
-        Registra un evento de montaje en el archivo de logs con formato datetime(formato iso) Nombre del montaje y log.
+        Registers a mount event in the log file with ISO datetime format, mount name, and log message.
         """
         import datetime
         try:
@@ -1442,11 +1442,11 @@ class MainWindow(QWidget):
 
     def populate_drive_letters(self):
         """
-        Llena el selector de unidades de red (ComboBox) con las letras libres de Windows.
+        Fills the network drive selector (ComboBox) with available Windows drive letters.
         
-        Escanea de forma descendente (de la Z: a la D:) omitiendo las letras de volumen
-        que ya se encuentren ocupadas por el sistema (ej. discos duros, lectores USB).
-        En sistemas UNIX, añade rutas de montaje por defecto dentro del directorio del usuario.
+        Scans downwards (from Z: to D:) omitting drive letters
+        already occupied by the system (e.g. hard drives, USB readers).
+        In UNIX systems, adds default mount paths inside the user's home directory.
         """
         self.cmb_drive_letter.clear()
         for char in range(ord('Z'), ord('C'), -1):
@@ -1456,8 +1456,8 @@ class MainWindow(QWidget):
 
     def load_profiles_into_combo(self):
         """
-        Consulta el gestor de configuración para recuperar los perfiles y cargarlos en la interfaz.
-        Siempre añade la opción '<Nuevo Perfil>' (traducida) en el primer índice.
+        Queries the config manager to retrieve profiles and load them into the interface.
+        Always adds the '<New Profile>' option (translated) at the first index.
         """
         self.cmb_profiles.blockSignals(True)
         self.cmb_profiles.clear()
@@ -1470,16 +1470,16 @@ class MainWindow(QWidget):
 
     def on_profile_selection_changed(self, index):
         """
-        Slot gatillado cuando el usuario selecciona un perfil diferente de la lista.
+        Slot triggered when the user selects a different profile from the list.
         
-        Si se selecciona el primer elemento (índice <= 0), se limpian los campos del formulario.
-        En caso contrario, se cargan y completan los datos del perfil seleccionado.
+        If the first item is selected (index <= 0), form fields are cleared.
+        Otherwise, connection data for the selected profile is loaded.
         
         Args:
-            index (int): Índice seleccionado en el ComboBox de perfiles.
+            index (int): Selected index in the profiles ComboBox.
         """
         if index <= 0:
-            # Limpiar entradas para un perfil nuevo
+            # Clear inputs for a new profile
             self.txt_host.clear()
             self.txt_port.setText("22")
             self.txt_user.clear()
@@ -1548,7 +1548,7 @@ class MainWindow(QWidget):
             self.lbl_key_path.setVisible(True)
             self.txt_key_path.setVisible(True)
             self.btn_browse_key.setVisible(True)
-        elif index == 2:  # Llave + Frase de paso
+        elif index == 2:  # Key + Passphrase
             self.lbl_password.setText(self.i18n.t('passphrase'))
             self.lbl_password.setVisible(True)
             self.txt_password.setVisible(True)
@@ -1558,8 +1558,7 @@ class MainWindow(QWidget):
 
     def on_browse_key_clicked(self):
         """
-        Abre un cuadro de diálogo del explorador de archivos nativo de Qt 
-        para que el usuario seleccione la ruta de su llave privada SSH.
+        Opens a native Qt file dialog to let the user select their private SSH key path.
         """
         file_path, _ = QFileDialog.getOpenFileName(
             self, self.i18n.t('ssh_key'), "", "All Files (*);;Key Files (*.pem *.key id_rsa)"
@@ -1569,10 +1568,10 @@ class MainWindow(QWidget):
 
     def get_current_form_data(self):
         """
-        Recopila todos los datos ingresados en el formulario de la UI.
+        Collects all data entered in the UI form.
         
         Returns:
-            dict: Parámetros listos para su persistencia o procesamiento.
+            dict: Parameters ready for persistence or processing.
         """
         idx = self.cmb_auth_type.currentIndex()
         
@@ -1607,8 +1606,8 @@ class MainWindow(QWidget):
 
     def on_save_profile_clicked(self):
         """
-        Valida y almacena los datos actuales del formulario como un perfil guardado.
-        Si es un perfil nuevo, solicita un nombre descriptivo al usuario mediante un QInputDialog.
+        Validates and saves current form data as a connection profile.
+        If it is a new profile, requests a name from the user via QInputDialog.
         """
         profile_name = self.cmb_profiles.currentText()
         if profile_name == self.i18n.t('new_profile') or not profile_name.strip():
@@ -1639,7 +1638,7 @@ class MainWindow(QWidget):
 
     def on_delete_profile_clicked(self):
         """
-        Elimina de forma permanente el perfil de conexión que está seleccionado.
+        Permanently deletes the selected connection profile.
         """
         profile_name = self.cmb_profiles.currentText()
         if profile_name == self.i18n.t('new_profile'):
@@ -1928,8 +1927,8 @@ class MainWindow(QWidget):
 
     def perform_auto_mount(self):
         """
-        Escanea la colección de perfiles almacenados e inicia el montaje de todos los perfiles
-        que tengan marcada la casilla de 'Autoconectar' (auto_mount = True) de forma secuencial.
+        Scans the connection profiles and starts mounting all profiles
+        with auto-mount enabled sequentially.
         """
         if not self.mounter.is_winfsp_installed():
             logger.warning("Auto-mount aborted because WinFsp is not installed.")
@@ -1941,7 +1940,7 @@ class MainWindow(QWidget):
 
     def process_auto_mount_queue(self):
         """
-        Procesa de forma secuencial y no bloqueante la cola de perfiles a auto-conectar.
+        Processes the auto-mount queue sequentially in a non-blocking way.
         """
         if not hasattr(self, 'auto_mount_queue') or not self.auto_mount_queue:
             return
@@ -1949,7 +1948,7 @@ class MainWindow(QWidget):
         profile = self.auto_mount_queue.pop(0)
         logger.info(f"Auto-mounting profile for host: {profile.get('host')}")
         
-        # Buscar el nombre del perfil
+        # Find the profile name
         profiles = self.config_manager.load_profiles()
         target_name = None
         for name, p in profiles.items():

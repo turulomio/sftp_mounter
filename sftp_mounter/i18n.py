@@ -128,6 +128,18 @@ TRANSLATIONS = {
         'hi': 'लॉग फ़ाइल साफ़ कर दी गई है।', 'zh': '日志文件已清除。', 'ru': 'Файл лога очищен.',
         'ro': 'Fișierul de log a fost curățat.'
     },
+    'log_read_error': {
+        'es': 'Error al leer el archivo de logs: {error}', 'en': 'Error reading log file: {error}', 'fr': 'Erreur lors de la lecture du fichier de journal: {error}',
+        'pt': 'Erro ao ler o arquivo de log: {error}', 'de': 'Fehler beim Lesen der Logdatei: {error}', 'it': 'Errore durante la lettura del file di log: {error}',
+        'hi': 'लॉग फ़ाइल पढ़ने में त्रुटि: {error}', 'zh': '读取日志文件出错: {error}', 'ru': 'Ошибка чтения лог-файла: {error}',
+        'ro': 'Eroare la citirea fișierului de log: {error}'
+    },
+    'log_clear_error': {
+        'es': 'Error al limpiar logs: {error}', 'en': 'Error clearing logs: {error}', 'fr': 'Erreur lors de l\'effacement des journaux: {error}',
+        'pt': 'Erro ao limpiar logs: {error}', 'de': 'Fehler beim Löschen der Logs: {error}', 'it': 'Errore durante la cancellazione dei log: {error}',
+        'hi': 'लॉग साफ़ करने में त्रुटि: {error}', 'zh': '清除日志时出错: {error}', 'ru': 'Ошибка очистки логов: {error}',
+        'ro': 'Eroare la curățarea logurilor: {error}'
+    },
     'menu_help': {
         'es': 'Ayuda', 'en': 'Help', 'fr': 'Aide',
         'pt': 'Ajuda', 'de': 'Hilfe', 'it': 'Aiuto',
@@ -442,6 +454,12 @@ TRANSLATIONS = {
         'pt': 'O perfil \'{profile_name}\' foi salvo.', 'de': 'Das Profil \'{profile_name}\' wurde gespeichert.', 'it': 'Il perfil \'{profile_name}\' è stato salvato.',
         'hi': 'प्रोफ़ाइल \'{profile_name}\' सहेज ली गई है।', 'zh': '配置文件 \'{profile_name}\' 已保存。', 'ru': 'Профиль \'{profile_name}\' сохранен.',
         'ro': 'Profilul \'{profile_name}\' a fost salvat.'
+    },
+    'profile_exists': {
+        'es': 'El perfil \'{profile_name}\' ya existe.', 'en': 'Profile \'{profile_name}\' already exists.', 'fr': 'Le profil \'{profile_name}\' existe déjà.',
+        'pt': 'O perfil \'{profile_name}\' já existe.', 'de': 'Das Profil \'{profile_name}\' existiert bereits.', 'it': 'Il profilo \'{profile_name}\' esiste già.',
+        'hi': 'प्रोफ़ाइल \'{profile_name}\' पहले से मौजूद है।', 'zh': '配置文件 \'{profile_name}\' 已存在。', 'ru': 'Профиль \'{profile_name}\' уже существует.',
+        'ro': 'Profilul \'{profile_name}\' există deja.'
     },
     'error_save_failed': {
         'es': 'No se pudo guardar el perfil.', 'en': 'Failed to save profile.', 'fr': 'Impossible d\'enregistrer le profil.',
