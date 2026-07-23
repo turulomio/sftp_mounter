@@ -56,16 +56,16 @@ El ejecutable compilado estará disponible en la carpeta raíz en `dist/SFTPMoun
 # RUTA DE ARCHIVOS EN WINDOWS 11
 
 ## Logs
-C:\Users\mariano\AppData\Roaming\SFTPMounter\app.log
+C:\Users\user\AppData\Roaming\SFTPMounter\app.log
 
 ## Configuración
-C:\Users\mariano\AppData\Roaming\SFTPMounter\config.json
+C:\Users\user\AppData\Roaming\SFTPMounter\config.json
 
 ## Binarios
-C:\Users\mariano\AppData\Roaming\SFTPMounter\bin\rclone.exe
-C:\Users\mariano\AppData\Roaming\SFTPMounter\bin\winfsp.msi
+C:\Users\user\AppData\Roaming\SFTPMounter\bin\rclone.exe
+C:\Users\user\AppData\Roaming\SFTPMounter\bin\winfsp.msi
 
 ## SSH known_hosts
-C:\Users\mariano\.ssh\known_hosts
+C:\Users\user\.ssh\known_hosts
 
 Actualmente no se almacena nada en known_hosts, Rclone no lo hace. Se emula haciendo una conexión a la ip y al puerto con herramientas como putty, ssh ... (PENDIENTE DE DESARROLLO)

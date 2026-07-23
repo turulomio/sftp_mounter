@@ -97,7 +97,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("SFTP Drive Mounter")
     app.setApplicationVersion("1.0.0")
-    app.setOrganizationName("Mariano Muñoz")
+    app.setOrganizationName("SFTP_Mounter")
     app.setOrganizationDomain("SFTP_Mounter")
 
     # Check if another instance of the application is already running using QLockFile
