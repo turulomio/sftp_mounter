@@ -96,7 +96,7 @@ def main():
     
     app = QApplication(sys.argv)
     app.setApplicationName("SFTP Drive Mounter")
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationVersion("1.2.0")
     app.setOrganizationName("SFTP_Mounter")
     app.setOrganizationDomain("SFTP_Mounter")
 
