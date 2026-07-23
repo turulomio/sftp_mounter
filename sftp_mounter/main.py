@@ -90,8 +90,6 @@ def main():
     """
     Inicializa el entorno, prepara la ventana principal de PySide6 y arranca el loop de Qt.
     """
-    setup_logging()
-    
     # Habilitar el escalado automático de pantalla (High DPI).
     # Esto es sumamente importante en sistemas modernos (Windows 11, pantallas 4K)
     # para que la interfaz gráfica no se vea borrosa o excesivamente pequeña.
@@ -102,6 +100,24 @@ def main():
     app.setApplicationVersion("1.0.0")
     app.setOrganizationName("Antigravity")
     app.setOrganizationDomain("antigravity.ai")
+
+    # Comprobar si ya existe otra instancia de la aplicación mediante QLockFile
+    from PySide6.QtCore import QLockFile, QDir
+    from PySide6.QtWidgets import QMessageBox
+    
+    lock_file_path = os.path.join(QDir.tempPath(), "sftp_mounter_single_instance.lock")
+    app.lock_file = QLockFile(lock_file_path)
+    
+    if not app.lock_file.tryLock(0):
+        QMessageBox.warning(
+            None,
+            "SFTP Mounter",
+            "Ya existe otra instancia de SFTP_Mounter en ejecución."
+        )
+        sys.exit(0)
+
+    # Si se obtuvo el bloqueo, procedemos a configurar los logs y el resto de la aplicación
+    setup_logging()
 
     # Forzar el uso del estilo de diseño 'Fusion' de Qt, que ofrece
     # una apariencia moderna y consistente en todas las plataformas soportadas.
