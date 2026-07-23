@@ -56,6 +56,18 @@ TRANSLATIONS = {
         'hi': 'विकल्प', 'zh': '选项', 'ru': 'Опции',
         'ro': 'Opțiuni'
     },
+    'menu_settings': {
+        'es': 'Configuración', 'en': 'Settings', 'fr': 'Paramètres',
+        'pt': 'Configurações', 'de': 'Einstellungen', 'it': 'Impostazioni',
+        'hi': 'सेटिंग्स', 'zh': '设置', 'ru': 'Настройки',
+        'ro': 'Setări'
+    },
+    'conn_in_volname': {
+        'es': 'Cadena de conexión en nombre de unidad', 'en': 'Connection string in drive name', 'fr': 'Chaîne de connexion dans le nom du lecteur',
+        'pt': 'String de conexão no nome da unidade', 'de': 'Verbindungszeichenfolge im Laufwerksnamen', 'it': 'Stringa di connessione nel nome dell\'unità',
+        'hi': 'ड्राइव नाम में कनेक्शन स्ट्रing', 'zh': '驱动器名称中的连接字符串', 'ru': 'Строка подключения в имени диска',
+        'ro': 'Șirul de conexiune în numele unității'
+    },
     'menu_view_log': {
         'es': 'Ver log', 'en': 'View log', 'fr': 'Voir le journal',
         'pt': 'Ver log', 'de': 'Log anzeigen', 'it': 'Visualizza log',

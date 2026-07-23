@@ -451,8 +451,18 @@ class Mounter:
         remote_target = f"{remote_name}:{remote_path}"
         
         profile_name = profile.get('profile_name', 'SFTP')
-        path_suffix = f" ({remote_path})" if remote_path else ""
-        volname = f"{profile_name} {user}@{host} {port}{path_suffix}"
+        
+        from sftp_mounter.config_manager import ConfigManager
+        config_mgr = ConfigManager()
+        settings = config_mgr.load_settings()
+        conn_in_volname = settings.get('conn_in_volname', True)
+        
+        if conn_in_volname:
+            path_suffix = f" ({remote_path})" if remote_path else ""
+            volname = f"{profile_name} {user}@{host}!{port}{path_suffix}"
+        else:
+            volname = profile_name
+            
         # Sanear el nombre de volumen para evitar caracteres no permitidos en Windows (como dos puntos, barras, etc.)
         for char in [':', '\\', '/', '*', '?', '"', '<', '>', '|']:
             volname = volname.replace(char, '_')

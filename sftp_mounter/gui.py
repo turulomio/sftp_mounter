@@ -837,6 +837,129 @@ class ProfileManagerDialog(QDialog):
             QMessageBox.critical(self, self.i18n.t('error_save_title'), self.i18n.t('error_save_failed'))
 
 
+class SettingsDialog(QDialog):
+    """
+    Diálogo para configurar las opciones globales de la aplicación:
+    idioma, inicio automático con Windows, minimizar al cerrar y mostrar cadena de conexión en nombre de unidad.
+    """
+    def __init__(self, parent=None, config_manager=None, i18n=None, main_window=None):
+        super().__init__(parent)
+        self.config_manager = config_manager
+        self.i18n = i18n
+        self.main_window = main_window
+
+        self.setWindowTitle(self.i18n.t('menu_settings') or "Configuración")
+        self.setMinimumSize(420, 320)
+        self.setStyleSheet(QSS_STYLE)
+
+        self.init_ui()
+        self.load_settings()
+
+    def init_ui(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(15)
+
+        form_frame = QFrame()
+        form_frame.setObjectName("cardFrame")
+        form_layout = QGridLayout(form_frame)
+        form_layout.setContentsMargins(15, 15, 15, 15)
+        form_layout.setSpacing(12)
+
+        # Idioma / Language
+        self.lbl_lang = QLabel(self.i18n.t('menu_language') or "Idioma")
+        self.cmb_lang = QComboBox()
+        for lang_code, lang_name in SUPPORTED_LANGUAGES.items():
+            self.cmb_lang.addItem(lang_name, lang_code)
+        form_layout.addWidget(self.lbl_lang, 0, 0)
+        form_layout.addWidget(self.cmb_lang, 0, 1)
+
+        # Iniciar con Windows
+        self.chk_start_with_win = QCheckBox(self.i18n.t('start_with_win') or "Iniciar con Windows")
+        form_layout.addWidget(self.chk_start_with_win, 1, 0, 1, 2)
+
+        # Minimizar al cerrar
+        self.chk_minimize_to_tray = QCheckBox(self.i18n.t('minimize_to_tray') or "Minimizar al cerrar")
+        form_layout.addWidget(self.chk_minimize_to_tray, 2, 0, 1, 2)
+
+        # Cadena de conexión en nombre de unidad
+        self.chk_conn_in_volname = QCheckBox(self.i18n.t('conn_in_volname') or "Cadena de conexión en nombre de unidad")
+        form_layout.addWidget(self.chk_conn_in_volname, 3, 0, 1, 2)
+
+        main_layout.addWidget(form_frame)
+
+        # Botones
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        self.btn_save = QPushButton(self.i18n.t('save') or "Guardar")
+        self.btn_save.setObjectName("btnPrimary")
+        self.btn_save.clicked.connect(self.on_save_clicked)
+        btn_layout.addWidget(self.btn_save)
+
+        self.btn_cancel = QPushButton(self.i18n.t('cancel') or "Cancelar")
+        self.btn_cancel.setObjectName("btnSecondary")
+        self.btn_cancel.clicked.connect(self.reject)
+        btn_layout.addWidget(self.btn_cancel)
+
+        main_layout.addLayout(btn_layout)
+
+    def load_settings(self):
+        settings = self.config_manager.load_settings()
+        
+        # 1. Idioma
+        current_lang = self.i18n.get_language()
+        idx = self.cmb_lang.findData(current_lang)
+        if idx >= 0:
+            self.cmb_lang.setCurrentIndex(idx)
+
+        # 2. Iniciar con Windows
+        start_with_win = self.main_window.get_startup_registry()
+        self.chk_start_with_win.setChecked(start_with_win)
+
+        # 3. Minimizar al cerrar
+        min_to_tray = settings.get('minimize_to_tray', True)
+        self.chk_minimize_to_tray.setChecked(min_to_tray)
+
+        # 4. Cadena de conexión en nombre de unidad
+        conn_in_volname = settings.get('conn_in_volname', False)
+        self.chk_conn_in_volname.setChecked(conn_in_volname)
+
+    def on_save_clicked(self):
+        settings = self.config_manager.load_settings()
+        
+        # Guardar idioma
+        new_lang = self.cmb_lang.currentData()
+        if new_lang != self.i18n.get_language():
+            self.i18n.set_language(new_lang)
+            settings['language'] = new_lang
+            self.main_window.retranslate_ui()
+
+        # Guardar Iniciar con Windows
+        chk_win = self.chk_start_with_win.isChecked()
+        if chk_win != self.main_window.get_startup_registry():
+            success = self.main_window.set_startup_registry(chk_win)
+            if success:
+                settings['start_with_windows'] = chk_win
+            else:
+                QMessageBox.critical(
+                    self, self.i18n.t('config_error_title'), self.i18n.t('config_error_msg')
+                )
+
+        # Guardar Minimizar al cerrar
+        settings['minimize_to_tray'] = self.chk_minimize_to_tray.isChecked()
+
+        # Guardar Cadena de conexión en nombre de unidad
+        settings['conn_in_volname'] = self.chk_conn_in_volname.isChecked()
+
+        self.config_manager.save_settings(settings)
+        
+        # Sincronizar y forzar recarga de UI en MainWindow
+        self.main_window.load_profiles_dashboard()
+        self.main_window.load_global_settings()
+        
+        self.accept()
+
+
 class MainWindow(QWidget):
     """
     Ventana principal de la aplicación. Administra los controles visuales,
@@ -911,35 +1034,10 @@ class MainWindow(QWidget):
 
         self.menu_options.addSeparator()
 
-        # Iniciar con Windows
-        self.act_start_with_win = QAction(self)
-        self.act_start_with_win.setCheckable(True)
-        self.act_start_with_win.triggered.connect(self.on_start_with_windows_changed)
-        self.menu_options.addAction(self.act_start_with_win)
-        
-        # Minimizar al cerrar
-        self.act_minimize_to_tray = QAction(self)
-        self.act_minimize_to_tray.setCheckable(True)
-        self.act_minimize_to_tray.triggered.connect(self.on_minimize_to_tray_changed)
-        self.menu_options.addAction(self.act_minimize_to_tray)
-        
-        self.menu_options.addSeparator()
-        
-        # Idioma Submenu
-        self.menu_language = QMenu(self)
-        self.menu_options.addMenu(self.menu_language)
-        
-        self.lang_action_group = QActionGroup(self)
-        self.lang_action_group.setExclusive(True)
-        self.lang_action_group.triggered.connect(self.on_menu_language_triggered)
-        self.lang_actions = {}
-        for lang_code, lang_name in SUPPORTED_LANGUAGES.items():
-            action = QAction(lang_name, self)
-            action.setCheckable(True)
-            action.setActionGroup(self.lang_action_group)
-            action.setData(lang_code)
-            self.menu_language.addAction(action)
-            self.lang_actions[lang_code] = action
+        # Configuración / Settings
+        self.act_settings = QAction(self)
+        self.act_settings.triggered.connect(self.on_open_settings)
+        self.menu_options.addAction(self.act_settings)
             
         # Ayuda Menu
         self.menu_help = QMenu(self)
@@ -1320,10 +1418,8 @@ class MainWindow(QWidget):
         self.act_manage_profiles.setText(self.i18n.t('manage_profiles'))
         self.act_view_log.setText(self.i18n.t('menu_view_log'))
         self.act_view_known_hosts.setText(self.i18n.t('menu_view_known_hosts'))
+        self.act_settings.setText(self.i18n.t('menu_settings'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
-        self.act_start_with_win.setText(self.i18n.t('start_with_win'))
-        self.act_minimize_to_tray.setText(self.i18n.t('minimize_to_tray'))
-        self.menu_language.setTitle(self.i18n.t('menu_language'))
         self.act_about.setText(self.i18n.t('about'))
 
         self.check_winfsp_status()
@@ -1703,7 +1799,7 @@ class MainWindow(QWidget):
         Intercepta los eventos de cambio de estado de la ventana en PySide6.
         """
         if event.type() == event.type().WindowStateChange:
-            if self.isMinimized() and self.act_minimize_to_tray.isChecked():
+            if self.isMinimized() and getattr(self, 'minimize_to_tray', True):
                 self.hide()
                 event.ignore()
                 self.tray_icon.showMessage(
@@ -1718,7 +1814,7 @@ class MainWindow(QWidget):
         """
         Intercepta el evento de cierre de ventana.
         """
-        if self.act_minimize_to_tray.isChecked() and len(self.mounter.active_mounts) > 0:
+        if getattr(self, 'minimize_to_tray', True) and len(self.mounter.active_mounts) > 0:
             self.hide()
             event.ignore()
             self.tray_icon.showMessage(
@@ -1733,67 +1829,27 @@ class MainWindow(QWidget):
     # ----------------- GLOBAL SETTINGS & AUTOSTART (REGISTRO DE WINDOWS) -----------------
     def load_global_settings(self):
         """
-        Carga la configuración global desde el config_manager y la aplica a los controles de la UI.
+        Carga la configuración global desde el config_manager.
         """
         settings = self.config_manager.load_settings()
         
         # 1. Minimizar a la bandeja (por defecto True)
-        min_to_tray = settings.get('minimize_to_tray', True)
-        self.act_minimize_to_tray.setChecked(min_to_tray)
+        self.minimize_to_tray = settings.get('minimize_to_tray', True)
         
         # 2. Iniciar con Windows (leer del registro de Windows)
         start_with_win = self.get_startup_registry()
-        self.act_start_with_win.setChecked(start_with_win)
-        
-        # Sincronizar el selector de idioma en el menú
-        current_lang = self.i18n.get_language()
-        if current_lang in self.lang_actions:
-            self.lang_actions[current_lang].setChecked(True)
         
         # Sincronizar el archivo JSON
         if start_with_win != settings.get('start_with_windows'):
             settings['start_with_windows'] = start_with_win
             self.config_manager.save_settings(settings)
 
-    def on_minimize_to_tray_changed(self):
+    def on_open_settings(self):
         """
-        Slot gatillado cuando se altera la casilla 'Minimizar al cerrar'.
+        Abre el diálogo de configuración global de la aplicación (Settings).
         """
-        settings = self.config_manager.load_settings()
-        settings['minimize_to_tray'] = self.act_minimize_to_tray.isChecked()
-        self.config_manager.save_settings(settings)
-
-    def on_start_with_windows_changed(self):
-        """
-        Slot gatillado cuando se activa/desactiva la casilla 'Iniciar con Windows'.
-        """
-        checked = self.act_start_with_win.isChecked()
-        success = self.set_startup_registry(checked)
-        if success:
-            settings = self.config_manager.load_settings()
-            settings['start_with_windows'] = checked
-            self.config_manager.save_settings(settings)
-        else:
-            self.act_start_with_win.setChecked(not checked)
-            QMessageBox.critical(
-                self, self.i18n.t('config_error_title'), self.i18n.t('config_error_msg')
-            )
-
-    def on_menu_language_triggered(self, action):
-        """
-        Slot gatillado cuando el usuario cambia el idioma seleccionado en el menú.
-        """
-        lang_code = action.data()
-        if lang_code:
-            self.i18n.set_language(lang_code)
-            
-            # Guardar ajuste persistente
-            settings = self.config_manager.load_settings()
-            settings['language'] = lang_code
-            self.config_manager.save_settings(settings)
-            
-            # Forzar re-traducción de la UI
-            self.retranslate_ui()
+        dialog = SettingsDialog(self, self.config_manager, self.i18n, self)
+        dialog.exec()
 
     def on_about_clicked(self):
         """
