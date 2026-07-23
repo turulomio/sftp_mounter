@@ -463,6 +463,24 @@ class Mounter:
             "--network-mode",
         ]
 
+        # Append optional file creation / permission settings
+        filemode = profile.get('filemode', '').strip()
+        dirmode = profile.get('dirmode', '').strip()
+        uid = profile.get('uid', '').strip()
+        gid = profile.get('gid', '').strip()
+        hide_dotfiles = profile.get('hide_dotfiles', False)
+
+        if filemode:
+            args.extend(["--file-perms", filemode])
+        if dirmode:
+            args.extend(["--dir-perms", dirmode])
+        if uid:
+            args.extend(["--uid", uid])
+        if gid:
+            args.extend(["--gid", gid])
+        if hide_dotfiles:
+            args.extend(["--exclude", ".*", "--exclude", ".*/**"])
+
         logger.info(f"Launching rclone mount with command: {' '.join(args)}")
 
         try:

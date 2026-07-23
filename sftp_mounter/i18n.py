@@ -724,6 +724,142 @@ TRANSLATIONS = {
         'zh': '无法确认 SSH 主机 \'{host}\' 的真实性。\n\n您要信任此服务器并接受其主机密钥吗？',
         'ru': 'Не удалось подтвердить подлинность узла SSH \'{host}\'.\n\nВы хотите доверять этому серверу и принять его ключ?',
         'ro': 'Autenticitatea host-ului SSH \'{host}\' nu poate fi stabilită.\n\nDoriți să aveți încredere în acest server și să-i acceptați cheia?'
+    },
+    'filemode': {
+        'es': 'Modo de archivos (filemode)', 'en': 'File Mode (filemode)', 'fr': 'Mode fichier',
+        'pt': 'Modo de arquivo', 'de': 'Dateimodus', 'it': 'Modalità file',
+        'hi': 'फ़ाइल मोड', 'zh': '文件模式', 'ru': 'Режим файлов',
+        'ro': 'Mod fișiere'
+    },
+    'dirmode': {
+        'es': 'Modo de carpetas (dirmode)', 'en': 'Directory Mode (dirmode)', 'fr': 'Mode répertoire',
+        'pt': 'Modo de diretório', 'de': 'Verzeichnismodus', 'it': 'Modalità directory',
+        'hi': 'निर्देशिका मोड', 'zh': '目录模式', 'ru': 'Режим папок',
+        'ro': 'Mod directoare'
+    },
+    'uid': {
+        'es': 'UID de archivos', 'en': 'File UID', 'fr': 'UID du fichier',
+        'pt': 'UID do arquivo', 'de': 'Datei-UID', 'it': 'UID del file',
+        'hi': 'फ़ाइल UID', 'zh': '文件 UID', 'ru': 'UID файлов',
+        'ro': 'UID fișiere'
+    },
+    'gid': {
+        'es': 'GID de archivos', 'en': 'File GID', 'fr': 'GID du fichier',
+        'pt': 'GID do arquivo', 'de': 'Datei-GID', 'it': 'GID del file',
+        'hi': 'फ़ाइल GID', 'zh': '文件 GID', 'ru': 'GID файлов',
+        'ro': 'GID fișiere'
+    },
+    'permissions_help_title': {
+        'es': 'Ayuda de Permisos (FUSE)', 'en': 'Permissions Help (FUSE)', 'fr': 'Aide sur les permissions',
+        'pt': 'Ajuda de Permissões', 'de': 'Berechtigungshilfe', 'it': 'Aiuto permessi',
+        'hi': 'अनुमतियाँ सहायता', 'zh': '权限帮助', 'ru': 'Справка по разрешениям',
+        'ro': 'Ajutor permisiuni'
+    },
+    'filemode_help_desc': {
+        'es': 'Define los permisos en formato octal con los que se mostrarán y crearán los archivos. Por ejemplo, 0640 significa: Propietario = Lectura/Escritura (6), Grupo = Lectura (4), Otros = Sin acceso (0). Si se deja en blanco, Rclone aplicará su comportamiento por defecto.',
+        'en': 'Defines the permission mask in octal format for file presentation and creation. For example, 0640 means: Owner = Read/Write (6), Group = Read (4), Others = No access (0). If left blank, Rclone will apply its default behavior.'
+    },
+    'dirmode_help_desc': {
+        'es': 'Define los permisos en formato octal con los que se mostrarán y crearán las carpetas. Por ejemplo, 0750 significa: Propietario = Lectura/Escritura/Ejecución (7), Grupo = Lectura/Ejecución (5), Otros = Sin acceso (0). Si se deja en blanco, Rclone aplicará su comportamiento por defecto.',
+        'en': 'Defines the permission mask in octal format for directory presentation and creation. For example, 0750 means: Owner = Read/Write/Execute (7), Group = Read/Execute (5), Others = No access (0). If left blank, Rclone will apply its default behavior.'
+    },
+    'uid_gid_help_desc': {
+        'es': 'Permite emular un User ID (UID) y Group ID (GID) de Unix específico de cara al sistema de archivos virtual en Windows (ej. 1000). Si se deja en blanco, se usarán los valores por defecto del sistema.',
+        'en': 'Allows emulating a specific Unix User ID (UID) and Group ID (GID) within the virtual file system in Windows (e.g., 1000). If left blank, default system values are used.'
+    },
+    'already_created_note': {
+        'es': 'Nota: Estos cambios no modifican los archivos ya existentes en el servidor SFTP, solo controlan cómo los muestra Windows y los permisos por defecto al crear nuevos ficheros/carpetas.',
+        'en': 'Note: These settings do not modify existing files on the SFTP server. They only control how Windows presents them and the default permissions when creating new files/directories.'
+    },
+    'tooltip_profile_name': {
+        'es': 'Nombre único para identificar este perfil de conexión.',
+        'en': 'Unique name to identify this connection profile.'
+    },
+    'tooltip_host': {
+        'es': 'Dirección IP o dominio del servidor SFTP remoto.',
+        'en': 'IP address or hostname of the remote SFTP server.'
+    },
+    'tooltip_port': {
+        'es': 'Puerto SSH del servidor remoto (por defecto es 22).',
+        'en': 'SSH port of the remote server (default is 22).'
+    },
+    'tooltip_user': {
+        'es': 'Nombre de usuario para autenticarse en el servidor remoto.',
+        'en': 'Username to authenticate on the remote server.'
+    },
+    'tooltip_auth_type': {
+        'es': 'Método de autenticación: contraseña tradicional o clave privada SSH.',
+        'en': 'Authentication method: traditional password or SSH private key.'
+    },
+    'tooltip_password': {
+        'es': 'Contraseña del usuario o frase de paso de la clave privada SSH.',
+        'en': 'User password or SSH private key passphrase.'
+    },
+    'tooltip_key_path': {
+        'es': 'Ruta local al archivo de clave privada SSH (ej. id_rsa, id_ed25519).',
+        'en': 'Local path to the SSH private key file (e.g. id_rsa, id_ed25519).'
+    },
+    'tooltip_remote_path': {
+        'es': 'Carpeta remota que se desea montar (por defecto es la raíz /).',
+        'en': 'Remote folder path to mount (default is root /).'
+    },
+    'tooltip_drive_letter': {
+        'es': 'Letra de unidad de Windows (ej. Z:) asignada a este montaje.',
+        'en': 'Windows drive letter (e.g. Z:) assigned to this mount.'
+    },
+    'tooltip_auto_mount': {
+        'es': 'Conectar automáticamente esta unidad al arrancar el programa.',
+        'en': 'Automatically connect this drive when the program starts.'
+    },
+    'tooltip_filemode': {
+        'es': 'Permisos para los nuevos archivos creados en formato octal (ej. 0640).',
+        'en': 'Permissions for new files in octal format (e.g. 0640).'
+    },
+    'tooltip_dirmode': {
+        'es': 'Permisos para las nuevas carpetas creadas en formato octal (ej. 0750).',
+        'en': 'Permissions for new directories in octal format (e.g. 0750).'
+    },
+    'tooltip_uid': {
+        'es': 'Unix User ID (UID) simulado para los archivos (opcional).',
+        'en': 'Simulated Unix User ID (UID) for files (optional).'
+    },
+    'tooltip_gid': {
+        'es': 'Unix Group ID (GID) simulado para los archivos (opcional).',
+        'en': 'Simulated Unix Group ID (GID) for files (optional).'
+    },
+    'menu_exit': {
+        'es': 'Salir', 'en': 'Exit', 'fr': 'Quitter',
+        'pt': 'Sair', 'de': 'Beenden', 'it': 'Esci',
+        'hi': 'बाहर निकलें', 'zh': '退出', 'ru': 'Выход',
+        'ro': 'Ieșire'
+    },
+    'confirm_exit_title': {
+        'es': 'Confirmar Salida', 'en': 'Confirm Exit', 'fr': 'Confirmer la fermeture',
+        'pt': 'Confirmar Saída', 'de': 'Beenden bestätigen', 'it': 'Conferma uscita',
+        'hi': 'बाहर निकलने की पुष्टि करें', 'zh': '确认退出', 'ru': 'Подтверждение выхода',
+        'ro': 'Confirmare ieșire'
+    },
+    'confirm_exit_msg': {
+        'es': '¿Estás seguro de que deseas desmontar todas las unidades activas y salir de la aplicación?',
+        'en': 'Are you sure you want to unmount all active drives and exit the application?'
+    },
+    'exiting_title': {
+        'es': 'Saliendo', 'en': 'Exiting', 'fr': 'Fermeture',
+        'pt': 'Saindo', 'de': 'Beenden', 'it': 'Uscita',
+        'hi': 'बाहर निकल रहे हैं', 'zh': '正在退出', 'ru': 'Выход',
+        'ro': 'Ieșire en curs'
+    },
+    'exiting_msg': {
+        'es': 'Desmontando todas las unidades SFTP activas y cerrando la aplicación...',
+        'en': 'Unmounting all active SFTP drives and closing the application...'
+    },
+    'hide_dotfiles': {
+        'es': 'Ocultar archivos punto (que son los archivos ocultos en Linux)',
+        'en': 'Hide dotfiles (which are hidden files in Linux)'
+    },
+    'tooltip_hide_dotfiles': {
+        'es': 'Excluye del montaje los archivos y carpetas que empiezan por punto (ej. .git, .htaccess).',
+        'en': 'Excludes files and folders starting with a dot (e.g. .git, .htaccess) from the mount.'
     }
 }
 

@@ -469,7 +469,7 @@ class ProfileManagerDialog(QDialog):
         self.initial_profile = initial_profile
 
         self.setWindowTitle(self.i18n.t('manage_profiles'))
-        self.setMinimumSize(720, 520)
+        self.setMinimumSize(720, 680)
         self.setStyleSheet(QSS_STYLE)
 
         self.init_ui()
@@ -527,6 +527,7 @@ class ProfileManagerDialog(QDialog):
         self.lbl_profile_name = QLabel(self.i18n.t('profile'))
         config_layout.addWidget(self.lbl_profile_name, 0, 0)
         self.txt_profile_name = QLineEdit()
+        self.txt_profile_name.setToolTip(self.i18n.t('tooltip_profile_name'))
         config_layout.addWidget(self.txt_profile_name, 0, 1, 1, 2)
 
         # Host
@@ -534,6 +535,7 @@ class ProfileManagerDialog(QDialog):
         config_layout.addWidget(self.lbl_host, 1, 0)
         self.txt_host = QLineEdit()
         self.txt_host.setPlaceholderText(self.i18n.t('host_placeholder'))
+        self.txt_host.setToolTip(self.i18n.t('tooltip_host'))
         config_layout.addWidget(self.txt_host, 1, 1, 1, 2)
 
         # Port
@@ -541,6 +543,7 @@ class ProfileManagerDialog(QDialog):
         config_layout.addWidget(self.lbl_port, 2, 0)
         self.txt_port = QLineEdit("22")
         self.txt_port.setFixedWidth(80)
+        self.txt_port.setToolTip(self.i18n.t('tooltip_port'))
         config_layout.addWidget(self.txt_port, 2, 1, 1, 2)
 
         # User
@@ -548,6 +551,7 @@ class ProfileManagerDialog(QDialog):
         config_layout.addWidget(self.lbl_user, 3, 0)
         self.txt_user = QLineEdit()
         self.txt_user.setPlaceholderText(self.i18n.t('user_placeholder'))
+        self.txt_user.setToolTip(self.i18n.t('tooltip_user'))
         config_layout.addWidget(self.txt_user, 3, 1, 1, 2)
 
         # Auth Type
@@ -560,6 +564,7 @@ class ProfileManagerDialog(QDialog):
             self.i18n.t('auth_key_pass')
         ])
         self.cmb_auth_type.currentIndexChanged.connect(self.on_auth_type_changed)
+        self.cmb_auth_type.setToolTip(self.i18n.t('tooltip_auth_type'))
         config_layout.addWidget(self.cmb_auth_type, 4, 1, 1, 2)
 
         # Password / Passphrase
@@ -567,6 +572,7 @@ class ProfileManagerDialog(QDialog):
         config_layout.addWidget(self.lbl_password, 5, 0)
         self.txt_password = QLineEdit()
         self.txt_password.setEchoMode(QLineEdit.Password)
+        self.txt_password.setToolTip(self.i18n.t('tooltip_password'))
         config_layout.addWidget(self.txt_password, 5, 1, 1, 2)
 
         # SSH Key Path
@@ -575,6 +581,7 @@ class ProfileManagerDialog(QDialog):
         config_layout.addWidget(self.lbl_key_path, 6, 0)
         self.txt_key_path = QLineEdit()
         self.txt_key_path.setPlaceholderText(self.i18n.t('ssh_key_placeholder'))
+        self.txt_key_path.setToolTip(self.i18n.t('tooltip_key_path'))
         self.txt_key_path.setVisible(False)
         config_layout.addWidget(self.txt_key_path, 6, 1)
 
@@ -590,6 +597,7 @@ class ProfileManagerDialog(QDialog):
         config_layout.addWidget(self.lbl_remote_path, 7, 0)
         self.txt_remote_path = QLineEdit()
         self.txt_remote_path.setPlaceholderText(self.i18n.t('remote_path_placeholder'))
+        self.txt_remote_path.setToolTip(self.i18n.t('tooltip_remote_path'))
         config_layout.addWidget(self.txt_remote_path, 7, 1, 1, 2)
 
         # Local Drive Letter
@@ -597,11 +605,61 @@ class ProfileManagerDialog(QDialog):
         config_layout.addWidget(self.lbl_local_drive, 8, 0)
         self.cmb_drive_letter = QComboBox()
         self.populate_drive_letters()
+        self.cmb_drive_letter.setToolTip(self.i18n.t('tooltip_drive_letter'))
         config_layout.addWidget(self.cmb_drive_letter, 8, 1, 1, 2)
 
-        # Auto-mount
+        # Auto-mount & Hide Dotfiles
         self.chk_auto_mount = QCheckBox(self.i18n.t('auto_mount'))
-        config_layout.addWidget(self.chk_auto_mount, 9, 1, 1, 2)
+        self.chk_auto_mount.setToolTip(self.i18n.t('tooltip_auto_mount'))
+        config_layout.addWidget(self.chk_auto_mount, 9, 1)
+
+        self.chk_hide_dotfiles = QCheckBox(self.i18n.t('hide_dotfiles'))
+        self.chk_hide_dotfiles.setToolTip(self.i18n.t('tooltip_hide_dotfiles'))
+        config_layout.addWidget(self.chk_hide_dotfiles, 9, 2)
+
+        # File Mode
+        self.lbl_filemode = QLabel(self.i18n.t('filemode'))
+        config_layout.addWidget(self.lbl_filemode, 10, 0)
+        
+        filemode_layout = QHBoxLayout()
+        self.txt_filemode = QLineEdit()
+        self.txt_filemode.setPlaceholderText("e.g. 0640")
+        self.txt_filemode.setToolTip(self.i18n.t('tooltip_filemode'))
+        filemode_layout.addWidget(self.txt_filemode)
+        
+        self.btn_help_permissions = QPushButton("?")
+        self.btn_help_permissions.setFixedSize(22, 22)
+        self.btn_help_permissions.setObjectName("btnSecondary")
+        self.btn_help_permissions.setStyleSheet("padding: 0px; font-size: 14px; font-weight: bold; border-radius: 11px;")
+        self.btn_help_permissions.setToolTip("Click to view detailed help on permissions.")
+        self.btn_help_permissions.clicked.connect(self.show_permissions_help)
+        filemode_layout.addWidget(self.btn_help_permissions)
+        
+        config_layout.addLayout(filemode_layout, 10, 1, 1, 2)
+
+        # Directory Mode
+        self.lbl_dirmode = QLabel(self.i18n.t('dirmode'))
+        config_layout.addWidget(self.lbl_dirmode, 11, 0)
+        self.txt_dirmode = QLineEdit()
+        self.txt_dirmode.setPlaceholderText("e.g. 0750")
+        self.txt_dirmode.setToolTip(self.i18n.t('tooltip_dirmode'))
+        config_layout.addWidget(self.txt_dirmode, 11, 1, 1, 2)
+
+        # UID
+        self.lbl_uid = QLabel(self.i18n.t('uid'))
+        config_layout.addWidget(self.lbl_uid, 12, 0)
+        self.txt_uid = QLineEdit()
+        self.txt_uid.setPlaceholderText("e.g. 1000")
+        self.txt_uid.setToolTip(self.i18n.t('tooltip_uid'))
+        config_layout.addWidget(self.txt_uid, 12, 1, 1, 2)
+
+        # GID
+        self.lbl_gid = QLabel(self.i18n.t('gid'))
+        config_layout.addWidget(self.lbl_gid, 13, 0)
+        self.txt_gid = QLineEdit()
+        self.txt_gid.setPlaceholderText("e.g. 1000")
+        self.txt_gid.setToolTip(self.i18n.t('tooltip_gid'))
+        config_layout.addWidget(self.txt_gid, 13, 1, 1, 2)
 
         right_layout.addWidget(form_frame)
 
@@ -663,6 +721,11 @@ class ProfileManagerDialog(QDialog):
         self.txt_key_path.clear()
         self.txt_remote_path.clear()
         self.chk_auto_mount.setChecked(False)
+        self.chk_hide_dotfiles.setChecked(False)
+        self.txt_filemode.clear()
+        self.txt_dirmode.clear()
+        self.txt_uid.clear()
+        self.txt_gid.clear()
         self.btn_delete_profile.setEnabled(False)
 
     def on_profile_selected(self, current, previous):
@@ -696,6 +759,12 @@ class ProfileManagerDialog(QDialog):
         self.txt_key_path.setText(profile.get('key_path', ''))
         self.txt_remote_path.setText(profile.get('remote_path', ''))
         self.chk_auto_mount.setChecked(profile.get('auto_mount', False))
+        self.chk_hide_dotfiles.setChecked(profile.get('hide_dotfiles', False))
+
+        self.txt_filemode.setText(profile.get('filemode', ''))
+        self.txt_dirmode.setText(profile.get('dirmode', ''))
+        self.txt_uid.setText(profile.get('uid', ''))
+        self.txt_gid.setText(profile.get('gid', ''))
 
         drive = profile.get('drive_letter', '')
         idx = self.cmb_drive_letter.findText(drive)
@@ -818,7 +887,12 @@ class ProfileManagerDialog(QDialog):
             'key_password': key_password,
             'remote_path': self.txt_remote_path.text().strip(),
             'drive_letter': drive,
-            'auto_mount': self.chk_auto_mount.isChecked()
+            'auto_mount': self.chk_auto_mount.isChecked(),
+            'hide_dotfiles': self.chk_hide_dotfiles.isChecked(),
+            'filemode': self.txt_filemode.text().strip(),
+            'dirmode': self.txt_dirmode.text().strip(),
+            'uid': self.txt_uid.text().strip(),
+            'gid': self.txt_gid.text().strip()
         }
 
         # If the name of an existing profile was changed, delete the old one
@@ -835,6 +909,22 @@ class ProfileManagerDialog(QDialog):
             QMessageBox.information(self, self.i18n.t('profile_saved_title'), self.i18n.t('profile_saved_msg', profile_name=name))
         else:
             QMessageBox.critical(self, self.i18n.t('error_save_title'), self.i18n.t('error_save_failed'))
+
+    def show_permissions_help(self):
+        """
+        Shows a detailed explanation of File Mode, Directory Mode, UID, and GID.
+        """
+        msg = (
+            f"<h3><b>{self.i18n.t('permissions_help_title')}</b></h3><br>"
+            f"<b>{self.i18n.t('filemode')} (Optional - e.g. 0640):</b><br>"
+            f"{self.i18n.t('filemode_help_desc')}<br><br>"
+            f"<b>{self.i18n.t('dirmode')} (Optional - e.g. 0750):</b><br>"
+            f"{self.i18n.t('dirmode_help_desc')}<br><br>"
+            f"<b>{self.i18n.t('uid')} / {self.i18n.t('gid')} (Optional):</b><br>"
+            f"{self.i18n.t('uid_gid_help_desc')}<br><br>"
+            f"<i>{self.i18n.t('already_created_note')}</i>"
+        )
+        QMessageBox.information(self, self.i18n.t('permissions_help_title'), msg)
 
 
 class SettingsDialog(QDialog):
@@ -1038,6 +1128,13 @@ class MainWindow(QWidget):
         self.act_settings = QAction(self)
         self.act_settings.triggered.connect(self.on_open_settings)
         self.menu_options.addAction(self.act_settings)
+            
+        self.menu_options.addSeparator()
+
+        # Salir / Exit
+        self.act_exit = QAction(self)
+        self.act_exit.triggered.connect(self.on_menu_exit_clicked)
+        self.menu_options.addAction(self.act_exit)
             
         # Ayuda Menu
         self.menu_help = QMenu(self)
@@ -1419,6 +1516,7 @@ class MainWindow(QWidget):
         self.act_view_log.setText(self.i18n.t('menu_view_log'))
         self.act_view_known_hosts.setText(self.i18n.t('menu_view_known_hosts'))
         self.act_settings.setText(self.i18n.t('menu_settings'))
+        self.act_exit.setText(self.i18n.t('menu_exit'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
         self.act_about.setText(self.i18n.t('about'))
 
@@ -1792,6 +1890,24 @@ class MainWindow(QWidget):
         self.force_unmount_all()
         self.tray_icon.hide()
         self.app.quit()
+
+    def on_menu_exit_clicked(self):
+        """
+        Confirms with the user, unmounts all active drives, and exits the application.
+        """
+        confirm = QMessageBox.question(
+            self,
+            self.i18n.t('confirm_exit_title'),
+            self.i18n.t('confirm_exit_msg'),
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if confirm == QMessageBox.Yes:
+            QMessageBox.information(
+                self,
+                self.i18n.t('exiting_title'),
+                self.i18n.t('exiting_msg')
+            )
+            self.close_app()
 
     def changeEvent(self, event):
         """
