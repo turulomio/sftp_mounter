@@ -4,20 +4,15 @@ Script de automatización para la preparación de binarios y empaquetado de SFTP
 Este script realiza dos tareas críticas de distribución (Build Tooling):
 1. **Preparación de Dependencias (`setup_binaries`)**: Descarga directamente de repositorios oficiales
    las herramientas que la aplicación requiere en tiempo de ejecución:
-   - El ejecutable portable de `rclone` (según el sistema operativo Windows o Linux).
-   - El instalador MSI de `WinFsp` (necesario únicamente para empaquetados destinados a Windows).
-   Posteriormente, extrae el ejecutable `rclone` desde su archivo comprimido (.zip) y lo almacena 
+   - El ejecutable portable de `rclone` para Windows.
+   - El instalador MSI de `WinFsp` (necesario para el montaje en Windows).
+   Posteriormente, extrae el ejecutable `rclone.exe` desde su archivo comprimido (.zip) y lo almacena 
    en la subcarpeta local `sftp_mounter/bin/`.
 2. **Empaquetado Independiente (`run_packaging`)**: Invoca la herramienta `PyInstaller` para
-   construir un único binario ejecutable portable (`.exe` en Windows o binario ejecutable en Linux)
+   construir un único binario ejecutable portable (`.exe` en Windows)
    que contiene en su interior tanto el código Python compilado como los binarios de soporte.
 
-Para nuevos desarrolladores:
-- Ejecutar este archivo directamente (`python sftp_mounter/package.py`) descargará y empaquetará
-  todo automáticamente en la carpeta raíz `dist/`.
-- No es necesario pre-instalar `PyInstaller` o descargar manualmente `rclone` / `WinFsp`.
-- Presta especial atención al flag `--add-data` que indica a PyInstaller qué carpetas debe inyectar
-  en el ejecutable para que `Mounter` las resuelva dinámicamente con `sys._MEIPASS`.
+Este script es exclusivo para empaquetar para el sistema operativo Windows.
 """
 
 import os
@@ -27,9 +22,8 @@ import urllib.request
 import zipfile
 import subprocess
 
-# Enlaces de descarga oficiales para obtener las versiones corriente/estable más recientes
+# Enlace de descarga oficial para obtener la versión corriente/estable de Rclone para Windows
 RCLONE_WIN_URL = "https://downloads.rclone.org/rclone-current-windows-amd64.zip"
-RCLONE_LINUX_URL = "https://downloads.rclone.org/rclone-current-linux-amd64.zip"
 
 def get_latest_winfsp_url():
     """
@@ -95,31 +89,31 @@ def setup_binaries():
     Gestiona la descarga y extracción selectiva de rclone y el instalador MSI de WinFsp.
     
     Crea la carpeta intermedia `build/bin` en la raíz del proyecto para evitar
-    mezclar binarios compilados de terceros con el código fuente del paquete.
+    mezclar binarios de soporte de terceros con el código fuente del paquete.
     En el caso de Rclone, lee el archivo .zip descargado y extrae únicamente el archivo 
-    del programa ejecutable (`rclone` o `rclone.exe`) descartando manuales u otros archivos internos.
+    del programa ejecutable (`rclone.exe`) descartando manuales u otros archivos internos.
     """
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     bin_dir = os.path.join(project_root, 'build', 'bin')
     os.makedirs(bin_dir, exist_ok=True)
 
-    rclone_exe_name = 'rclone.exe' if os.name == 'nt' else 'rclone'
+    rclone_exe_name = 'rclone.exe'
     rclone_path = os.path.join(bin_dir, rclone_exe_name)
     winfsp_path = os.path.join(bin_dir, 'winfsp.msi')
 
-    # 1. Gestionar WinFsp (Solo requerido para empaquetar para el entorno Windows)
-    if not os.path.exists(winfsp_path) and os.name == 'nt':
+    # 1. Gestionar WinFsp
+    if not os.path.exists(winfsp_path):
         print("Descargando la última versión de WinFsp...")
         winfsp_url = get_latest_winfsp_url()
         download_file(winfsp_url, winfsp_path)
-    elif os.name == 'nt':
+    else:
         print("WinFsp MSI ya existe en la carpeta build/bin.")
 
     # 2. Gestionar Rclone
     if not os.path.exists(rclone_path):
         print("Descargando la última versión de Rclone...")
         zip_path = os.path.join(bin_dir, 'rclone_temp.zip')
-        rclone_url = RCLONE_WIN_URL if os.name == 'nt' else RCLONE_LINUX_URL
+        rclone_url = RCLONE_WIN_URL
         
         if download_file(rclone_url, zip_path):
             try:
@@ -142,12 +136,8 @@ def setup_binaries():
     else:
         print(f"Rclone binary ya existe en {rclone_path}")
 
-    # En sistemas UNIX, es mandatorio otorgar permisos explícitos de ejecución al binario (chmod +x)
-    if os.name != 'nt' and os.path.exists(rclone_path):
-        os.chmod(rclone_path, 0o755)
-
     # Copiar el logotipo SVG del proyecto a la carpeta build/bin
-    logo_src = os.path.join(project_root, 'logo.svg')
+    logo_src = os.path.join(project_root, 'sftp_mounter', 'images', 'logo.svg')
     logo_dest = os.path.join(bin_dir, 'logo.svg')
     if os.path.exists(logo_src):
         shutil.copy2(logo_src, logo_dest)
@@ -206,8 +196,8 @@ def run_packaging():
         print("PyInstaller no está instalado. Instalándolo vía pip...")
         subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=True)
 
-    # El separador de rutas add-data difiere según el SO (';' en Windows, ':' en Linux)
-    separator = ';' if os.name == 'nt' else ':'
+    # Usar separador de rutas add-data de Windows (';')
+    separator = ';'
     
     cmd = [
         "pyinstaller",
@@ -233,8 +223,10 @@ def run_packaging():
         print(f"Error durante el empaquetado: {e}")
 
 if __name__ == "__main__":
+    if os.name != 'nt':
+        print("Error: Este script de empaquetado solo es compatible con entornos Windows o Wine (os.name == 'nt').")
+        sys.exit(1)
+
     print("Preparando dependencias para distribución todo-en-uno...")
     setup_binaries()
     run_packaging()
-
-

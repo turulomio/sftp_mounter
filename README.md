@@ -16,6 +16,7 @@ A simple Qt6 GUI tool to mount SFTP connections as network drives on Windows 11 
 *   **Historial de Conexiones:** Guarda múltiples perfiles para cargarlos rápidamente.
 *   **Inicio Automático:** Opción de arrancar con Windows en segundo plano.
 *   **Minimizado a la Bandeja (Tray):** Oculta la aplicación en la barra de tareas al cerrar o minimizar para mantener el SFTP montado.
+*   **Instancia Única Protegida:** Implementa un mecanismo de prevención mediante `QLockFile` para evitar la ejecución simultánea de múltiples instancias y sus consecuentes conflictos de bloqueo en archivos de log.
 
 ## Requisitos de Desarrollo
 
