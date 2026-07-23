@@ -215,6 +215,7 @@ def run_packaging():
         "--noconsole",
         "--name", exe_name,
         f"--add-data=build/bin{separator}bin",
+        "--icon=sftp_mounter/images/logo.ico",
         "--distpath", "dist",
         "--workpath", "build",
         "--specpath", ".",
