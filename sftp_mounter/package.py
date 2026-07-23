@@ -1,18 +1,16 @@
 """
-Script de automatización para la preparación de binarios y empaquetado de SFTP Mounter.
+Automation script for binary preparation and packaging of SFTP Mounter.
 
-Este script realiza dos tareas críticas de distribución (Build Tooling):
-1. **Preparación de Dependencias (`setup_binaries`)**: Descarga directamente de repositorios oficiales
-   las herramientas que la aplicación requiere en tiempo de ejecución:
-   - El ejecutable portable de `rclone` para Windows.
-   - El instalador MSI de `WinFsp` (necesario para el montaje en Windows).
-   Posteriormente, extrae el ejecutable `rclone.exe` desde su archivo comprimido (.zip) y lo almacena 
-   en la subcarpeta local `sftp_mounter/bin/`.
-2. **Empaquetado Independiente (`run_packaging`)**: Invoca la herramienta `PyInstaller` para
-   construir un único binario ejecutable portable (`.exe` en Windows)
-   que contiene en su interior tanto el código Python compilado como los binarios de soporte.
+This script performs two critical distribution tasks (Build Tooling):
+1. **Dependency Preparation (`setup_binaries`)**: Downloads supporting tools required at runtime directly from official repositories:
+   - The portable executable of `rclone` for Windows.
+   - The `WinFsp` MSI installer (required for mounting in Windows).
+   Subsequently, extracts the `rclone.exe` executable from its compressed archive (.zip) and stores it 
+   in the local subfolder `sftp_mounter/bin/`.
+2. **Independent Packaging (`run_packaging`)**: Invokes the `PyInstaller` tool to build a single portable executable binary (`.exe` in Windows)
+   containing both compiled Python code and supporting binaries.
 
-Este script es exclusivo para empaquetar para el sistema operativo Windows.
+This script is exclusive for packaging for the Windows operating system.
 """
 
 import os
@@ -22,17 +20,17 @@ import urllib.request
 import zipfile
 import subprocess
 
-# Enlace de descarga oficial para obtener la versión corriente/estable de Rclone para Windows
+# Official download link to obtain the current/stable version of Rclone for Windows
 RCLONE_WIN_URL = "https://downloads.rclone.org/rclone-current-windows-amd64.zip"
 
 def get_latest_winfsp_url():
     """
-    Obtiene la URL de descarga del instalador MSI de la última versión estable de WinFsp
-    consultando de forma dinámica la API pública de GitHub.
-    En caso de error o límite de tasa de la API, cae en una versión estática de respaldo (v2.0).
+    Dynamically obtains the download URL of the MSI installer for the latest stable version of WinFsp
+    by querying the public GitHub API.
+    In case of error or API rate limits, falls back to a static backup version (v2.0).
     
     Returns:
-        str: URL absoluta de descarga para el MSI de WinFsp.
+        str: Absolute download URL for the WinFsp MSI.
     """
     fallback_url = "https://github.com/winfsp/winfsp/releases/download/v2.0/winfsp-2.0.23075.msi"
     api_url = "https://api.github.com/repos/winfsp/winfsp/releases/latest"
@@ -52,46 +50,46 @@ def get_latest_winfsp_url():
                     if url:
                         return url
     except Exception as e:
-        print(f"Advertencia: No se pudo obtener la última versión de WinFsp desde la API de GitHub ({e}). Usando versión de respaldo.")
+        print(f"Warning: Could not obtain the latest version of WinFsp from the GitHub API ({e}). Using fallback version.")
     return fallback_url
 
 def download_file(url, target_path):
     """
-    Descarga un archivo remoto a través de una petición HTTP GET con User-Agent personalizado.
+    Downloads a remote file via an HTTP GET request with a custom User-Agent.
     
-    Establece cabeceras simulando un navegador para evitar bloqueos por parte del servidor HTTP
-    de destino que a veces restringe a clientes automatizados básicos de Python.
+    Sets headers simulating a browser to avoid blocking by the destination HTTP server,
+    which sometimes restricts basic Python automated clients.
     
     Args:
-        url (str): Dirección URL de origen del archivo.
-        target_path (str): Ruta local absoluta donde se guardará el archivo descargado.
+        url (str): Source URL address of the file.
+        target_path (str): Absolute local path where the downloaded file will be saved.
         
     Returns:
-        bool: True si la descarga fue exitosa, False en caso de error de red o permisos.
+        bool: True if the download was successful, False in case of network or permission error.
     """
-    print(f"Descargando {url} -> {target_path}...")
+    print(f"Downloading {url} -> {target_path}...")
     try:
         req = urllib.request.Request(
             url, 
             headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         )
         with urllib.request.urlopen(req) as response, open(target_path, 'wb') as out_file:
-            # Copiar el stream de bytes de forma eficiente al archivo físico
+            # Copy the stream of bytes efficiently to the physical file
             shutil.copyfileobj(response, out_file)
-        print("Descarga completada con éxito.")
+        print("Download completed successfully.")
         return True
     except Exception as e:
-        print(f"Error al descargar: {e}")
+        print(f"Error downloading: {e}")
         return False
 
 def setup_binaries():
     """
-    Gestiona la descarga y extracción selectiva de rclone y el instalador MSI de WinFsp.
+    Manages the download and selective extraction of rclone and the WinFsp MSI installer.
     
-    Crea la carpeta intermedia `build/bin` en la raíz del proyecto para evitar
-    mezclar binarios de soporte de terceros con el código fuente del paquete.
-    En el caso de Rclone, lee el archivo .zip descargado y extrae únicamente el archivo 
-    del programa ejecutable (`rclone.exe`) descartando manuales u otros archivos internos.
+    Creates the intermediate `build/bin` folder in the project root to avoid
+    mixing third-party compiled binaries with source package files.
+    In the case of Rclone, reads the downloaded .zip file and extracts only the program
+    executable (`rclone.exe`), discarding manuals or other internal files.
     """
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     bin_dir = os.path.join(project_root, 'build', 'bin')
@@ -101,52 +99,52 @@ def setup_binaries():
     rclone_path = os.path.join(bin_dir, rclone_exe_name)
     winfsp_path = os.path.join(bin_dir, 'winfsp.msi')
 
-    # 1. Gestionar WinFsp
+    # 1. Manage WinFsp
     if not os.path.exists(winfsp_path):
-        print("Descargando la última versión de WinFsp...")
+        print("Downloading the latest version of WinFsp...")
         winfsp_url = get_latest_winfsp_url()
         download_file(winfsp_url, winfsp_path)
     else:
-        print("WinFsp MSI ya existe en la carpeta build/bin.")
+        print("WinFsp MSI already exists in the build/bin folder.")
 
-    # 2. Gestionar Rclone
+    # 2. Manage Rclone
     if not os.path.exists(rclone_path):
-        print("Descargando la última versión de Rclone...")
+        print("Downloading the latest version of Rclone...")
         zip_path = os.path.join(bin_dir, 'rclone_temp.zip')
         rclone_url = RCLONE_WIN_URL
         
         if download_file(rclone_url, zip_path):
             try:
-                print("Extrayendo rclone...")
+                print("Extracting rclone...")
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                    # Buscar únicamente el archivo ejecutable dentro de la estructura interna del zip
+                    # Look only for the executable file within the internal structure of the zip
                     for file_info in zip_ref.infolist():
                         filename = os.path.basename(file_info.filename)
                         if filename == rclone_exe_name:
                             with zip_ref.open(file_info.filename) as source, open(rclone_path, 'wb') as target:
                                 shutil.copyfileobj(source, target)
                             break
-                print("Extracción completada.")
+                print("Extraction completed.")
             except Exception as e:
-                print(f"Error al extraer rclone: {e}")
+                print(f"Error extracting rclone: {e}")
             finally:
-                # Limpiar el archivo .zip temporal descargado para no dejar basura en el repositorio
+                # Clean up the temporary .zip file so as not to leave garbage in the repository
                 if os.path.exists(zip_path):
                     os.remove(zip_path)
     else:
-        print(f"Rclone binary ya existe en {rclone_path}")
+        print(f"Rclone binary already exists in {rclone_path}")
 
-    # Copiar el logotipo SVG del proyecto a la carpeta build/bin
+    # Copy the project's SVG logo to the build/bin folder
     logo_src = os.path.join(project_root, 'sftp_mounter', 'images', 'logo.svg')
     logo_dest = os.path.join(bin_dir, 'logo.svg')
     if os.path.exists(logo_src):
         shutil.copy2(logo_src, logo_dest)
-        print("Logotipo SVG copiado a build/bin.")
+        print("SVG logo copied to build/bin.")
 
 def get_project_version() -> str:
     """
-    Recupera de forma dinámica la versión del proyecto definida en el archivo pyproject.toml.
-    Si ocurre algún error en la lectura, retorna la versión de respaldo por defecto '1.0.0'.
+    Dynamically retrieves the project version defined in the pyproject.toml file.
+    If any error occurs during reading, returns the default backup version '1.0.0'.
     """
     try:
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -164,39 +162,39 @@ def get_project_version() -> str:
 
 def run_packaging():
     """
-    Ejecuta el empaquetado final a través de PyInstaller utilizando subprocesos.
+    Executes final packaging via PyInstaller using subprocesses.
     
-    Verifica previamente si `pyinstaller` se encuentra disponible en el entorno de Python actual.
-    Si no está instalado, invoca a pip para instalarlo antes de proceder.
+    First checks if `pyinstaller` is available in the current Python environment.
+    If not installed, invokes pip to install it before proceeding.
     
-    Significado de las opciones de PyInstaller declaradas:
-    - --onefile: Compila y unifica todo el programa en un único binario portable autoextraíble.
-    - --noconsole: Deshabilita la consola de comandos de fondo (cmd.exe) en Windows al arrancar,
-      haciendo que solo se visualice la interfaz de usuario GUI de PySide6 de forma limpia.
-    - --name: Nombre que tendrá el binario final generado (ej. SFTPMounter-v1.0.0).
-    - --add-data: Inyecta la carpeta local 'build/bin' con los binarios de soporte descargados 
-      dentro del volumen interno virtual de PyInstaller, exponiéndolos bajo el subdirectorio 'bin'.
-    - --distpath / --workpath / --specpath: Rutas personalizadas para organizar los directorios de salida.
+    Meaning of declared PyInstaller options:
+    - --onefile: Compiles and unifies the entire program into a single self-extracting portable binary.
+    - --noconsole: Disables the background command console (cmd.exe) on Windows upon startup,
+      showing only PySide6's graphical user interface GUI cleanly.
+    - --name: Name of the generated final binary (e.g. SFTPMounter-v1.0.0).
+    - --add-data: Injects the local 'build/bin' folder with downloaded support binaries into
+      PyInstaller's internal virtual volume, exposing them under the 'bin' subdirectory.
+    - --distpath / --workpath / --specpath: Custom paths to organize output directories.
     """
-    print("Iniciando empaquetado con PyInstaller...")
+    print("Starting packaging with PyInstaller...")
     
-    # Mover el contexto de ejecución al directorio raíz del proyecto para resolver rutas relativas
+    # Move execution context to the project root directory to resolve relative paths
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(project_root)
 
-    # Obtener versión para el nombre del archivo de salida
+    # Get version for the output file name
     version = get_project_version()
     exe_name = f"SFTPMounter-v{version}"
-    print(f"Versión detectada: {version} -> Nombre de salida: {exe_name}")
+    print(f"Detected version: {version} -> Output name: {exe_name}")
 
-    # Verificar presencia de PyInstaller e instalar automáticamente si es necesario
+    # Verify presence of PyInstaller and install automatically if necessary
     try:
         import PyInstaller
     except ImportError:
-        print("PyInstaller no está instalado. Instalándolo vía pip...")
+        print("PyInstaller is not installed. Installing via pip...")
         subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=True)
 
-    # Usar separador de rutas add-data de Windows (';')
+    # Use Windows path separator for add-data (';')
     separator = ';'
     
     cmd = [
@@ -212,21 +210,21 @@ def run_packaging():
         "sftp_mounter/main.py"
     ]
     
-    print(f"Ejecutando: {' '.join(cmd)}")
+    print(f"Running: {' '.join(cmd)}")
     try:
         subprocess.run(cmd, check=True)
         print("="*60)
-        print("EMPAQUETADO FINALIZADO CON ÉXITO.")
-        print(f"El ejecutable único se encuentra en la carpeta 'dist/' en la raíz del proyecto")
+        print("PACKAGING FINISHED SUCCESSFULLY.")
+        print(f"The single executable is located in the 'dist/' folder at the project root")
         print("="*60)
     except subprocess.CalledProcessError as e:
-        print(f"Error durante el empaquetado: {e}")
+        print(f"Error during packaging: {e}")
 
 if __name__ == "__main__":
     if os.name != 'nt':
-        print("Error: Este script de empaquetado solo es compatible con entornos Windows o Wine (os.name == 'nt').")
+        print("Error: This packaging script is only compatible with Windows or Wine environments (os.name == 'nt').")
         sys.exit(1)
 
-    print("Preparando dependencias para distribución todo-en-uno...")
+    print("Preparing dependencies for all-in-one distribution...")
     setup_binaries()
     run_packaging()

@@ -1,21 +1,21 @@
 """
-Gestor de configuración y perfiles de conexión de SFTP Mounter.
+Configuration and connection profiles manager for SFTP Mounter.
 
-Este módulo implementa la clase `ConfigManager`, encargada de persistir y recuperar los datos 
-de configuración del usuario (perfiles de conexión y ajustes globales) en un archivo JSON local.
+This module implements the `ConfigManager` class, responsible for persisting and retrieving user
+configuration data (connection profiles and global settings) in a local JSON file.
 
-Estructura del archivo JSON de configuración (`profiles.json`):
+JSON configuration file structure (`profiles.json`):
 -------------------------------------------------------------
 {
     "profiles": {
-        "Nombre Del Perfil": {
+        "Profile Name": {
             "host": "sftp.example.com",
             "port": 22,
-            "user": "usuario",
+            "user": "username",
             "auth_type": "password" | "key",
-            "password": "...",        # Contraseña en texto plano antes de ser enviada a obscurecer por rclone
-            "key_path": "/ruta/a/id_rsa",
-            "key_password": "...",    # Contraseña opcional para llave privada cifrada
+            "password": "...",        # Plaintext password before being obscured by rclone
+            "key_path": "/path/to/id_rsa",
+            "key_password": "...",    # Optional passphrase for encrypted private key
             "remote_path": "/var/www",
             "drive_letter": "X:",
             "auto_mount": true | false
@@ -27,11 +27,11 @@ Estructura del archivo JSON de configuración (`profiles.json`):
     }
 }
 
-Para nuevos desarrolladores:
-- Los métodos internos que inician con guion bajo (`_read_raw`, `_write_raw`) operan directamente
-  con la estructura de almacenamiento raíz. No se deben invocar desde el exterior del módulo.
-- La persistencia resuelve problemas de compatibilidad si el usuario tuviera un archivo antiguo
-  que solo guardaba un diccionario plano de perfiles.
+For new developers:
+- Internal methods starting with an underscore (`_read_raw`, `_write_raw`) operate directly
+  with the root storage structure. They should not be called from outside the module.
+- Persistence resolves compatibility issues if the user had an old file
+  that only saved a flat dictionary of profiles.
 """
 
 import os
@@ -41,13 +41,13 @@ import base64
 
 logger = logging.getLogger("SFTPMounter.ConfigManager")
 
-_OFS_KEY = 0x5A  # Máscara XOR simple para ofuscar texto plano
+_OFS_KEY = 0x5A  # Simple XOR mask to obfuscate plaintext
 
 def _encode_pass(val: str) -> str:
     if not val:
         return ""
     try:
-        # Aplicar transformación XOR simple + Base64 nativo
+        # Apply simple XOR transformation + native Base64
         obfuscated_bytes = bytes([b ^ _OFS_KEY for b in val.encode('utf-8')])
         return base64.b64encode(obfuscated_bytes).decode('utf-8')
     except Exception as e:
@@ -58,24 +58,24 @@ def _decode_pass(val: str) -> str:
     if not val:
         return ""
     try:
-        # Decodificar Base64 + revertir máscara XOR
+        # Decode Base64 + revert XOR mask
         decoded_bytes = base64.b64decode(val.encode('utf-8'))
         deobfuscated_bytes = bytes([b ^ _OFS_KEY for b in decoded_bytes])
         return deobfuscated_bytes.decode('utf-8')
     except Exception:
-        # Fallback por retrocompatibilidad si la contraseña estaba en texto plano o formato previo
+        # Fallback for backward compatibility if the password was in plaintext or previous format
         return val
 
 class ConfigManager:
     """
-    Administra la lectura, escritura y eliminación de perfiles de conexión y configuraciones generales.
+    Manages the reading, writing, and deletion of connection profiles and general settings.
     
-    Los perfiles se almacenan de manera persistente en formato JSON en el directorio de datos de la aplicación,
-    evitando la pérdida de información entre ejecuciones.
+    Profiles are persistently stored in JSON format in the application's data directory,
+    preventing information loss between executions.
     """
     def __init__(self):
         """
-        Inicializa el gestor de configuración calculando la ruta óptima según el sistema operativo.
+        Initializes the configuration manager by calculating the optimal path according to the OS.
         """
         # Windows: %APPDATA%/SFTPMounter
         self.config_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'SFTPMounter')
@@ -84,7 +84,7 @@ class ConfigManager:
 
     def _ensure_config_dir(self):
         """
-        Garantiza de forma segura la existencia física del directorio de configuración.
+        Safely guarantees the physical existence of the configuration directory.
         """
         try:
             os.makedirs(self.config_dir, exist_ok=True)
@@ -97,18 +97,17 @@ class ConfigManager:
             except Exception:
                 pass
 
-
     def _read_raw(self):
         """
-        Realiza la lectura física del archivo JSON y gestiona la retrocompatibilidad.
+        Performs the physical reading of the JSON file and manages backward compatibility.
         
-        Si el archivo no existe, devuelve una estructura vacía inicializada por defecto.
-        Si encuentra un formato antiguo (donde el JSON contenía directamente la lista de perfiles
-        en la raíz en lugar del diccionario estructurado con la clave "profiles"), migra los datos
-        al vuelo para evitar roturas.
+        If the file does not exist, returns an empty structure initialized by default.
+        If it finds an old format (where the JSON directly contained the list of profiles
+        in the root instead of the structured dictionary with the "profiles" key), it migrates the data
+        on the fly to avoid breakage.
         
         Returns:
-            dict: Diccionario raíz con las claves obligatorias 'profiles' y 'settings'.
+            dict: Root dictionary with the mandatory keys 'profiles' and 'settings'.
         """
         if not os.path.exists(self.config_file):
             return {"profiles": {}, "settings": {}}
@@ -116,7 +115,7 @@ class ConfigManager:
             with open(self.config_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 
-                # Comprobar si tiene el formato estructurado moderno
+                # Check if it has the modern structured format
                 if isinstance(data, dict) and ("profiles" in data or "settings" in data):
                     if "profiles" not in data:
                         data["profiles"] = {}
@@ -124,10 +123,10 @@ class ConfigManager:
                         data["settings"] = {}
                     return data
                 else:
-                    # MIGRACIÓN / COMPATIBILIDAD RETROACTIVA:
-                    # Si el archivo contenía un diccionario plano directo, lo envolvemos
-                    # en la clave "profiles" y creamos una sección de "settings" vacía.
-                    logger.info("Migrando archivo de configuración antiguo a formato estructurado.")
+                    # BACKWARD COMPATIBILITY MIGRATION:
+                    # If the file contained a direct flat dictionary, we wrap it
+                    # in the "profiles" key and create an empty "settings" section.
+                    logger.info("Migrating old configuration file to structured format.")
                     return {"profiles": data if isinstance(data, dict) else {}, "settings": {}}
         except Exception as e:
             logger.error(f"Error loading config file: {e}")
@@ -135,17 +134,17 @@ class ConfigManager:
 
     def _write_raw(self, data):
         """
-        Escribe de forma física la estructura del diccionario completo en el archivo JSON.
+        Physically writes the structure of the entire dictionary to the JSON file.
         
         Args:
-            data (dict): Diccionario estructurado que contiene 'profiles' y 'settings'.
+            data (dict): Structured dictionary containing 'profiles' and 'settings'.
             
         Returns:
-            bool: True si la escritura se completó con éxito, False de lo contrario.
+            bool: True if the write completed successfully, False otherwise.
         """
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
-                # Escribir con sangría (indent=4) para facilitar su edición/lectura manual si fuera necesario
+                # Write with indentation (indent=4) to facilitate manual editing/reading if necessary
                 json.dump(data, f, indent=4, ensure_ascii=False)
             return True
         except Exception as e:
@@ -154,10 +153,10 @@ class ConfigManager:
 
     def load_profiles(self):
         """
-        Carga y devuelve todos los perfiles de conexión SFTP, descifrando las contraseñas guardadas.
+        Loads and returns all SFTP connection profiles, decrypting saved passwords.
         
         Returns:
-            dict: Colección de perfiles donde la clave es el nombre del perfil y el valor sus datos de configuración.
+            dict: Collection of profiles where the key is the profile name and the value is its configuration data.
         """
         raw_profiles = self._read_raw()["profiles"]
         decoded_profiles = {}
@@ -173,13 +172,13 @@ class ConfigManager:
 
     def save_profiles(self, profiles):
         """
-        Guarda la colección completa de perfiles en el disco cifrando las contraseñas.
+        Saves the complete collection of profiles to disk, encrypting passwords.
         
         Args:
-            profiles (dict): Diccionario completo con todos los perfiles de usuario.
+            profiles (dict): Complete dictionary with all user profiles.
             
         Returns:
-            bool: True si se guardó con éxito, False en caso de error.
+            bool: True if saved successfully, False in case of error.
         """
         encoded_profiles = {}
         for name, profile in profiles.items():
@@ -198,22 +197,22 @@ class ConfigManager:
 
     def load_settings(self):
         """
-        Obtiene la configuración global de la aplicación (auto-inicio, minimizar en segundo plano, etc.).
+        Retrieves the global configuration of the application (autostart, minimize to tray, etc.).
         
         Returns:
-            dict: Claves de configuración global y sus estados booleanos.
+            dict: Global configuration keys and their boolean states.
         """
         return self._read_raw()["settings"]
 
     def save_settings(self, settings):
         """
-        Guarda la configuración global del sistema de forma persistente.
+        Saves the global system configuration persistently.
         
         Args:
-            settings (dict): Ajustes globales a guardar.
+            settings (dict): Global settings to save.
             
         Returns:
-            bool: True si se guardó con éxito, False en caso de error.
+            bool: True if saved successfully, False in case of error.
         """
         data = self._read_raw()
         data["settings"] = settings
@@ -221,27 +220,27 @@ class ConfigManager:
 
     def get_profile(self, name):
         """
-        Recupera los datos de conexión de un perfil específico dado su nombre.
+        Retrieves the connection data of a specific profile by its identifier name.
         
         Args:
-            name (str): Nombre del perfil que se desea consultar.
+            name (str): Name of the profile to query.
             
         Returns:
-            dict | None: Diccionario con la configuración del perfil, o None si no existe.
+            dict | None: Dictionary with profile configuration, or None if it does not exist.
         """
         profiles = self.load_profiles()
         return profiles.get(name)
 
     def save_profile(self, name, profile_data):
         """
-        Crea o actualiza de forma individual un perfil por su nombre de identificación.
+        Creates or updates a single profile by its identification name.
         
         Args:
-            name (str): Nombre único del perfil.
-            profile_data (dict): Diccionario con los parámetros de conexión SFTP asociados.
+            name (str): Unique name of the profile.
+            profile_data (dict): Dictionary with associated SFTP connection parameters.
             
         Returns:
-            bool: True si se guardaron los cambios del perfil, False en caso de error.
+            bool: True if profile changes were saved, False in case of error.
         """
         profiles = self.load_profiles()
         profiles[name] = profile_data
@@ -249,17 +248,16 @@ class ConfigManager:
 
     def delete_profile(self, name):
         """
-        Elimina de forma permanente un perfil identificado por su nombre.
+        Permanently deletes a profile identified by its name.
         
         Args:
-            name (str): Nombre del perfil que se desea eliminar.
+            name (str): Name of the profile to delete.
             
         Returns:
-            bool: True si se eliminó y guardaron los cambios, False si el perfil no existía o falló el guardado.
+            bool: True if deleted and changes saved, False if the profile did not exist or saving failed.
         """
         profiles = self.load_profiles()
         if name in profiles:
             del profiles[name]
             return self.save_profiles(profiles)
         return False
-

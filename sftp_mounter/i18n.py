@@ -1,26 +1,26 @@
 """
-Módulo de Internacionalización (i18n) para SFTP Mounter.
+Internationalization (i18n) Module for SFTP Mounter.
 
-Este módulo implementa la clase `I18N` encargada de administrar las traducciones
-y textos localizados de la interfaz gráfica y los mensajes del sistema.
+This module implements the `I18N` class responsible for managing translations
+and localized strings of the user interface and system messages.
 
-Idiomas soportados:
-- Español ('es') - Idioma por defecto
-- Inglés ('en')
-- Francés ('fr')
-- Portugués ('pt')
-- Alemán ('de')
-- Italiano ('it')
+Supported languages:
+- English ('en') - Default language
+- Spanish ('es')
+- French ('fr')
+- Portuguese ('pt')
+- German ('de')
+- Italian ('it')
 - Hindi ('hi')
-- Chino ('zh')
-- Ruso ('ru')
-- Rumano ('ro')
+- Chinese ('zh')
+- Russian ('ru')
+- Romanian ('ro')
 
-Para desarrolladores nuevos:
-- Si deseas añadir una nueva etiqueta de texto, agrégala en el diccionario `TRANSLATIONS`
-  con sus respectivas traducciones en todos los idiomas soportados.
-- Si un idioma no tiene definida la clave consultada, el método `t()` caerá automáticamente
-  en el idioma por defecto o inglés para evitar que la UI falle o muestre un texto vacío.
+For new developers:
+- If you want to add a new text label, add it to the `TRANSLATIONS` dictionary
+  with its respective translations in all supported languages.
+- If a language does not have the queried key defined, the `t()` method will automatically
+  fallback to the default language or English to prevent the UI from failing or showing empty text.
 """
 
 import os
@@ -711,8 +711,8 @@ TRANSLATIONS = {
 
 class I18N:
     """
-    Controla el idioma actual seleccionado en la aplicación y proporciona
-    la traducción correspondiente a cada una de las etiquetas del sistema.
+    Controls the current language selected in the application and provides
+    the corresponding translation for each of the system labels.
     """
     def __init__(self, default_lang='en'):
         self.current_language = default_lang
@@ -720,11 +720,11 @@ class I18N:
 
     def detect_system_language(self):
         """
-        Intenta identificar de forma automática el idioma del sistema operativo.
-        Si está dentro de los admitidos, lo configura como el idioma activo por defecto.
+        Attempts to automatically identify the operating system language.
+        If it is supported, configures it as the active default language.
         """
         try:
-            # Obtener localización por defecto del SO
+            # Get default OS locale
             loc = locale.getdefaultlocale()[0]
             if loc:
                 lang = loc.split('_')[0].lower()
@@ -734,7 +734,7 @@ class I18N:
         except Exception:
             pass
             
-        # Alternativa para sistemas POSIX/Linux inspeccionando variables de entorno comunes
+        # Fallback for POSIX/Linux systems by inspecting common environment variables
         for env in ('LANG', 'LC_ALL', 'LC_MESSAGES'):
             val = os.environ.get(env)
             if val:
@@ -743,15 +743,15 @@ class I18N:
                     self.current_language = lang
                     return
                     
-        # Caer en la opción por defecto en caso de no poder detectar
+        # Fallback to default option if unable to detect
         self.current_language = 'en'
 
     def set_language(self, lang):
         """
-        Modifica el idioma actual de la aplicación.
+        Modifies the current language of the application.
         
         Args:
-            lang (str): Código ISO de 2 letras (es, en, fr, pt, de, it, hi, zh, ru, ro).
+            lang (str): ISO 2-letter code (es, en, fr, pt, de, it, hi, zh, ru, ro).
         """
         if lang in SUPPORTED_LANGUAGES:
             self.current_language = lang
@@ -759,23 +759,23 @@ class I18N:
 
     def get_language(self):
         """
-        Devuelve el código del idioma activo actual.
+        Returns the code of the currently active language.
         """
         return self.current_language
 
     def t(self, key, **kwargs):
         """
-        Traduce una etiqueta al idioma seleccionado.
+        Translates a label to the selected language.
         
-        Si la clave no existe, devuelve la propia clave para alertar del error de traducción.
-        Si la clave existe pero no tiene traducción en el idioma actual, cae en español o inglés.
+        If the key does not exist, returns the key itself to alert of the translation error.
+        If the key exists but has no translation in the current language, falls back to English or Spanish.
         
         Args:
-            key (str): Nombre de la clave a consultar.
-            **kwargs: Parámetros opcionales para formatear en la cadena del mensaje.
+            key (str): Name of the key to query.
+            **kwargs: Optional parameters to format into the message string.
             
         Returns:
-            str: Texto localizado y formateado.
+            str: Localized and formatted text.
         """
         if key not in TRANSLATIONS:
             logger.warning(f"Translation key not found: '{key}'")
@@ -789,10 +789,10 @@ class I18N:
         if not text:
             text = translations_dict.get('es')
         if not text:
-            # Primera opción disponible en el diccionario
+            # First available option in the dictionary
             text = next(iter(translations_dict.values()))
             
-        # Formatear si se pasaron argumentos adicionales de reemplazo (ej. {drive})
+        # Format if additional replacement arguments were passed (e.g. {drive})
         if kwargs:
             try:
                 return text.format(**kwargs)
