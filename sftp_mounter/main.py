@@ -112,7 +112,7 @@ def main():
         QMessageBox.warning(
             None,
             "SFTP Mounter",
-            "Ya existe otra instancia de SFTP_Mounter en ejecución."
+            "Another instance of SFTP Mounter is already running."
         )
         sys.exit(0)
 

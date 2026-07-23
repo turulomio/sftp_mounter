@@ -714,7 +714,7 @@ class I18N:
     Controla el idioma actual seleccionado en la aplicación y proporciona
     la traducción correspondiente a cada una de las etiquetas del sistema.
     """
-    def __init__(self, default_lang='es'):
+    def __init__(self, default_lang='en'):
         self.current_language = default_lang
         self.detect_system_language()
 
@@ -783,12 +783,11 @@ class I18N:
             
         translations_dict = TRANSLATIONS[key]
         
-        # Intentar el idioma actual, caer en español, inglés o en la primera disponible
         text = translations_dict.get(self.current_language)
         if not text:
-            text = translations_dict.get('es')
-        if not text:
             text = translations_dict.get('en')
+        if not text:
+            text = translations_dict.get('es')
         if not text:
             # Primera opción disponible en el diccionario
             text = next(iter(translations_dict.values()))

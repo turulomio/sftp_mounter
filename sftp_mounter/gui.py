@@ -981,7 +981,7 @@ class MainWindow(QWidget):
         # Cargar idioma preferido de la configuración o detectar automáticamente
         settings = self.config_manager.load_settings()
         saved_lang = settings.get('language', '')
-        self.i18n = I18N(default_lang=saved_lang if saved_lang else 'es')
+        self.i18n = I18N(default_lang=saved_lang if saved_lang else 'en')
         
         # Variables de estado interno
         self.is_connecting = False         # Flag para bloquear re-intentos de conexión
