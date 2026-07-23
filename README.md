@@ -10,11 +10,9 @@
 
 ## 📸 Screenshots
 
-| Connection Manager | System Tray Quick Access |
-|:---:|:---:|
-| ![SFTP Mounter Main UI](sftp_mounter/images/logo.svg) | *Easily access and open your mounted drives directly from the Windows System Tray* |
-
-*(Note: Add your actual screenshots in the placeholder above!)*
+| Connection Manager | Profile View | Settings Dialog |
+|:---:|:---:|:---:|
+| ![Connection Manager](snapshots/MainWindow.png) | ![Profile View](snapshots/Profile.png) | ![Settings Dialog](snapshots/Settings.png) |
 
 ---
 
