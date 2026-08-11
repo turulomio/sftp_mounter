@@ -24,7 +24,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y wine64 wine32 wget xvfb libgl1-mesa-dri libgl1-mesa-glx mesa-vulkan-drivers
+          sudo apt-get install -y wine64 wine32 wget xvfb libgl1 libglx-mesa0 mesa-vulkan-drivers
 
       - name: Initialize Wine Environment
         env:
