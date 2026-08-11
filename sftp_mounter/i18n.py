@@ -74,11 +74,11 @@ TRANSLATIONS = {
         'hi': 'लॉग देखें', 'zh': '查看日志', 'ru': 'Просмотр лога',
         'ro': 'Vezi logul'
     },
-    'menu_view_known_hosts': {
-        'es': 'Ver known_hosts', 'en': 'View known_hosts', 'fr': 'Voir known_hosts',
-        'pt': 'Ver known_hosts', 'de': 'known_hosts anzeigen', 'it': 'Visualizza known_hosts',
-        'hi': 'known_hosts देखें', 'zh': '查看 known_hosts', 'ru': 'Просмотр known_hosts',
-        'ro': 'Vezi known_hosts'
+    'menu_open_user_dir': {
+        'es': 'Abrir directorio del usuario', 'en': 'Open user directory', 'fr': 'Ouvrir le dossier de l\'utilisateur',
+        'pt': 'Abrir diretório do usuário', 'de': 'Benutzerverzeichnis öffnen', 'it': 'Apri cartella utente',
+        'hi': 'उपयोगकर्ता निर्देशिका खोलें', 'zh': '打开用户目录', 'ru': 'Открыть папку пользователя',
+        'ro': 'Deschide directorul utilizatorului'
     },
     'known_hosts_title': {
         'es': 'Visor de known_hosts', 'en': 'known_hosts Viewer', 'fr': 'Visionneuse de known_hosts',
@@ -217,6 +217,18 @@ TRANSLATIONS = {
         'pt': 'nome de usuário', 'de': 'Benutzername', 'it': 'nome utente',
         'hi': 'username', 'zh': '用户名', 'ru': 'имя пользователя',
         'ro': 'nume utilizator'
+    },
+    'root_user_warning': {
+        'es': '⚠️ ADVERTENCIA: Usar el usuario "root" mediante SFTP conlleva riesgos elevados y puede producir graves daños en el sistema operativo.',
+        'en': '⚠️ WARNING: Using the "root" user via SFTP carries high risks and could cause severe damage to the operating system.',
+        'fr': '⚠️ AVERTISSEMENT : L\'utilisation de l\'utilisateur "root" via SFTP comporte des risques élevés et peut causer de graves dommages au système d\'exploitation.',
+        'pt': '⚠️ AVISO: Usar o usuário "root" via SFTP envolve altos riscos e pode causar graves danos ao sistema operacional.',
+        'de': '⚠️ WARNUNG: Die Verwendung des Benutzers "root" über SFTP birgt hohe Risiken und kann das Betriebssystem schwer beschädigen.',
+        'it': '⚠️ AVVISO: L\'uso dell\'utente "root" tramite SFTP comporta elevati rischi e può causare gravi danni al sistema operativo.',
+        'hi': '⚠️ चेतावनी: SFTP के माध्यम से "root" उपयोगकर्ता का उपयोग करने से उच्च जोखिम होता है और ऑपरेटिंग सिस्टम को गंभीर नुकसान पहुंच सकता है।',
+        'zh': '⚠️ 警告：通过 SFTP 使用 "root" 用户存在极高风险，可能会对操作系统造成严重破坏。',
+        'ru': '⚠️ ПРЕДУПРЕЖДЕНИЕ: Использование пользователя "root" через SFTP влечет за собой высокий риск и может нанести серьезный вред операционной системе.',
+        'ro': '⚠️ AVERTISMENT: Utilizarea utilizatorului "root" prin SFTP implică riscuri ridicate și poate provoca daune grave sistemului de operare.'
     },
     'auth': {
         'es': 'Autenticación:', 'en': 'Authentication:', 'fr': 'Authentification:',
