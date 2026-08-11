@@ -64,3 +64,18 @@ All application data is securely stored in your local Windows user profile:
 If you want to contribute, compile the application yourself, or inspect the project changes, please check the developer guide:
 
 👉 **[gemini.md](file:///home/worky/Proyectos/sftp_mounter/gemini.md)**
+
+---
+
+## ⚖️ Disclaimer & License
+
+This program is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License (v3)** as published by the Free Software Foundation.
+
+### Disclaimer of Warranty & Limitation of Liability
+
+This program is distributed in the hope that it will be useful, but **WITHOUT ANY WARRANTY**; without even the implied warranty of **MERCHANTABILITY** or **FITNESS FOR A PARTICULAR PURPOSE**. See the [GNU General Public License](LICENSE) for more details.
+
+> [!WARNING]
+> **Use at your own risk:** The authors and contributors shall not be held liable for any claims, damages, data loss, system failure, or other liabilities arising from the use of, or inability to use, this software (including, but not limited to, mounting remote file systems with elevated administrative privileges such as `root`).
+
+For full legal details, please refer to the [LICENSE](LICENSE) file.
