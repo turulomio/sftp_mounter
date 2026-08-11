@@ -18,8 +18,8 @@ For new developers:
 import os
 import sys
 import logging
-from PySide6.QtCore import Qt, QSize, QTimer, QThread, Signal
-from PySide6.QtGui import QIcon, QFont, QAction, QActionGroup
+from PySide6.QtCore import Qt, QSize, QTimer, QThread, Signal, QUrl
+from PySide6.QtGui import QIcon, QFont, QAction, QActionGroup, QDesktopServices
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel,
     QLineEdit, QPushButton, QComboBox, QFileDialog, QSystemTrayIcon,
@@ -1107,7 +1107,6 @@ class MainWindow(QWidget):
         self.is_connecting = False         # Flag para bloquear re-intentos de conexión
         self.log_viewer = None
         self.log_path = os.path.join(self.mounter.app_dir, 'mounts.log')
-        self.known_hosts_viewer = None
         self.active_workers = {}
 
 
@@ -1147,10 +1146,10 @@ class MainWindow(QWidget):
         self.act_view_log.triggered.connect(self.on_open_log_viewer)
         self.menu_options.addAction(self.act_view_log)
 
-        # Ver known_hosts
-        self.act_view_known_hosts = QAction(self)
-        self.act_view_known_hosts.triggered.connect(self.on_open_known_hosts_viewer)
-        self.menu_options.addAction(self.act_view_known_hosts)
+        # Abrir directorio del usuario
+        self.act_open_user_dir = QAction(self)
+        self.act_open_user_dir.triggered.connect(self.on_open_user_dir)
+        self.menu_options.addAction(self.act_open_user_dir)
 
         self.menu_options.addSeparator()
 
@@ -1507,18 +1506,13 @@ class MainWindow(QWidget):
             self.log_viewer.activateWindow()
             self.log_viewer.raise_()
 
-    def on_open_known_hosts_viewer(self):
+    def on_open_user_dir(self):
         """
-        Opens the independent non-modal known_hosts viewer window.
+        Opens the user data directory in the OS default file explorer.
         """
-        if self.known_hosts_viewer is None or not self.known_hosts_viewer.isVisible():
-            self.known_hosts_viewer = KnownHostsViewerDialog(parent=self, i18n=self.i18n)
-            self.known_hosts_viewer.show()
-        else:
-            self.known_hosts_viewer.activateWindow()
-            self.known_hosts_viewer.raise_()
-
-
+        user_dir = self.mounter.app_dir
+        os.makedirs(user_dir, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(user_dir))
 
     def log_action(self, profile_name: str, message: str):
         """
@@ -1544,7 +1538,7 @@ class MainWindow(QWidget):
         self.menu_options.setTitle(self.i18n.t('menu_options'))
         self.act_manage_profiles.setText(self.i18n.t('manage_profiles'))
         self.act_view_log.setText(self.i18n.t('menu_view_log'))
-        self.act_view_known_hosts.setText(self.i18n.t('menu_view_known_hosts'))
+        self.act_open_user_dir.setText(self.i18n.t('menu_open_user_dir'))
         self.act_settings.setText(self.i18n.t('menu_settings'))
         self.act_exit.setText(self.i18n.t('menu_exit'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
