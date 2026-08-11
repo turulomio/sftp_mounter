@@ -22,6 +22,8 @@ setup-wine-python = [
     { cmd = "wget -q https://www.python.org/ftp/python/3.10.8/python-3.10.8-amd64.exe -O python-windows.exe" },
     { cmd = "wine python-windows.exe /quiet InstallAllUsers=1 PrependPath=1" },
     { cmd = "rm python-windows.exe" },
+    { cmd = "wine python -m pip install --upgrade pip setuptools wheel" },
+    { cmd = "wine python -m pip install PySide6" },
     { cmd = "wine python -m pip install ." }
 ]
 build-windows-wine = { cmd = "wine python sftp_mounter/package.py" }
