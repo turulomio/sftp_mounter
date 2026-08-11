@@ -26,7 +26,7 @@ setup-wine-python = [
 ]
 build-windows-wine = { cmd = "wine python sftp_mounter/package.py" }
 run-wine = { cmd = "wine python sftp_mounter/main.py" }
-test = { cmd = "python -m unittest discover tests" }
+test = { cmd = "wine python -m unittest discover tests" }
 release = { script = "sftp_mounter.release_info:print_release_steps" }
 
 

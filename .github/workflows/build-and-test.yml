@@ -31,29 +31,30 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry
 
-      - name: Install Python Dependencies
+      - name: Install Poetry Dependencies
         run: |
           poetry install
 
-      - name: Run Unit Tests
+      - name: Setup Wine Python (setup-wine-python)
         env:
+          WINEDEBUG: -all
+        run: |
+          xvfb-run -a poetry run poe setup-wine-python
+
+      - name: Run Unit Tests under Wine (test)
+        env:
+          WINEDEBUG: -all
           QT_QPA_PLATFORM: offscreen
         run: |
-          poetry run poe test
+          xvfb-run -a poetry run poe test
 
-      - name: Setup Wine Python
+      - name: Build Windows Executable under Wine (build-windows-wine)
         env:
           WINEDEBUG: -all
         run: |
-          poetry run poe setup-wine-python
+          xvfb-run -a poetry run poe build-windows-wine
 
-      - name: Build Windows Executable
-        env:
-          WINEDEBUG: -all
-        run: |
-          poetry run poe build-windows-wine
-
-      - name: Upload Executable Artifact
+      - name: Upload Windows Executable Artifact
         uses: actions/upload-artifact@v4
         with:
           name: SFTPMounter-Windows-Executable
