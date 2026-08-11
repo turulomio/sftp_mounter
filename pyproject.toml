@@ -19,6 +19,9 @@ sftp-mounter = "sftp_mounter.main:main"
 
 [tool.poe.tasks]
 setup-wine-python = [
+    { cmd = "wget -q https://aka.ms/vs/17/release/vc_redist.x64.exe -O vc_redist.x64.exe" },
+    { cmd = "wine vc_redist.x64.exe /quiet /norestart" },
+    { cmd = "rm vc_redist.x64.exe" },
     { cmd = "wget -q https://www.python.org/ftp/python/3.10.8/python-3.10.8-amd64.exe -O python-windows.exe" },
     { cmd = "wine python-windows.exe /quiet InstallAllUsers=1 PrependPath=1" },
     { cmd = "rm python-windows.exe" },
