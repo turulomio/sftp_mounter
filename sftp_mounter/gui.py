@@ -18,8 +18,8 @@ For new developers:
 import os
 import sys
 import logging
-from PySide6.QtCore import Qt, QSize, QTimer, QThread, Signal
-from PySide6.QtGui import QIcon, QFont, QAction, QActionGroup
+from PySide6.QtCore import Qt, QSize, QTimer, QThread, Signal, QUrl
+from PySide6.QtGui import QIcon, QFont, QAction, QActionGroup, QDesktopServices
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel,
     QLineEdit, QPushButton, QComboBox, QFileDialog, QSystemTrayIcon,
@@ -60,6 +60,42 @@ class UnmountWorker(QThread):
     def run(self):
         success = self.mounter.unmount_sftp(self.drive)
         self.finished.emit(success)
+
+
+def parse_version(v_str: str):
+    import re
+    clean_v = str(v_str).strip().lstrip('v')
+    parts = re.findall(r'\d+', clean_v)
+    return tuple(int(p) for p in parts) if parts else (0,)
+
+
+class UpdateCheckWorker(QThread):
+    finished_check = Signal(bool, str, str, str, bool)  # (has_update, latest_version, release_url, error_msg, is_manual)
+
+    def __init__(self, current_version="1.2.0", is_manual=False):
+        super().__init__()
+        self.current_version = current_version
+        self.is_manual = is_manual
+
+    def run(self):
+        import urllib.request
+        import json
+        url = "https://api.github.com/repos/turulomio/sftp_mounter/releases/latest"
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'SFTPMounter'})
+            with urllib.request.urlopen(req, timeout=8) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode('utf-8'))
+                    tag_name = data.get('tag_name', '').strip()
+                    html_url = data.get('html_url', 'https://github.com/turulomio/sftp_mounter/releases')
+                    
+                    latest_v = tag_name.lstrip('v')
+                    has_update = parse_version(latest_v) > parse_version(self.current_version)
+                    self.finished_check.emit(has_update, latest_v, html_url, "", self.is_manual)
+                else:
+                    self.finished_check.emit(False, "", "", f"HTTP {response.status}", self.is_manual)
+        except Exception as e:
+            self.finished_check.emit(False, "", "", str(e), self.is_manual)
 
 
 # Premium QSS Style Sheet (Dark Mode)
@@ -552,11 +588,33 @@ class ProfileManagerDialog(QDialog):
         self.txt_user = QLineEdit()
         self.txt_user.setPlaceholderText(self.i18n.t('user_placeholder'))
         self.txt_user.setToolTip(self.i18n.t('tooltip_user'))
+        self.txt_user.textChanged.connect(self.on_user_changed)
         config_layout.addWidget(self.txt_user, 3, 1, 1, 2)
+
+        # Root warning alert box
+        self.root_warning_card = QFrame()
+        self.root_warning_card.setObjectName("rootWarningCard")
+        self.root_warning_card.setStyleSheet("""
+            QFrame#rootWarningCard {
+                background-color: #3d1a1d;
+                border: 1px solid #ff5555;
+                border-radius: 6px;
+            }
+        """)
+        root_warning_layout = QHBoxLayout(self.root_warning_card)
+        root_warning_layout.setContentsMargins(10, 8, 10, 8)
+
+        self.lbl_root_warning = QLabel(self.i18n.t('root_user_warning'))
+        self.lbl_root_warning.setStyleSheet("color: #ff5555; font-size: 12px; font-weight: bold;")
+        self.lbl_root_warning.setWordWrap(True)
+        root_warning_layout.addWidget(self.lbl_root_warning)
+
+        self.root_warning_card.setVisible(False)
+        config_layout.addWidget(self.root_warning_card, 4, 0, 1, 3)
 
         # Auth Type
         self.lbl_auth = QLabel(self.i18n.t('auth'))
-        config_layout.addWidget(self.lbl_auth, 4, 0)
+        config_layout.addWidget(self.lbl_auth, 5, 0)
         self.cmb_auth_type = QComboBox()
         self.cmb_auth_type.addItems([
             self.i18n.t('auth_password'),
@@ -565,61 +623,61 @@ class ProfileManagerDialog(QDialog):
         ])
         self.cmb_auth_type.currentIndexChanged.connect(self.on_auth_type_changed)
         self.cmb_auth_type.setToolTip(self.i18n.t('tooltip_auth_type'))
-        config_layout.addWidget(self.cmb_auth_type, 4, 1, 1, 2)
+        config_layout.addWidget(self.cmb_auth_type, 5, 1, 1, 2)
 
         # Password / Passphrase
         self.lbl_password = QLabel(self.i18n.t('password'))
-        config_layout.addWidget(self.lbl_password, 5, 0)
+        config_layout.addWidget(self.lbl_password, 6, 0)
         self.txt_password = QLineEdit()
         self.txt_password.setEchoMode(QLineEdit.Password)
         self.txt_password.setToolTip(self.i18n.t('tooltip_password'))
-        config_layout.addWidget(self.txt_password, 5, 1, 1, 2)
+        config_layout.addWidget(self.txt_password, 6, 1, 1, 2)
 
         # SSH Key Path
         self.lbl_key_path = QLabel(self.i18n.t('ssh_key'))
         self.lbl_key_path.setVisible(False)
-        config_layout.addWidget(self.lbl_key_path, 6, 0)
+        config_layout.addWidget(self.lbl_key_path, 7, 0)
         self.txt_key_path = QLineEdit()
         self.txt_key_path.setPlaceholderText(self.i18n.t('ssh_key_placeholder'))
         self.txt_key_path.setToolTip(self.i18n.t('tooltip_key_path'))
         self.txt_key_path.setVisible(False)
-        config_layout.addWidget(self.txt_key_path, 6, 1)
+        config_layout.addWidget(self.txt_key_path, 7, 1)
 
         self.btn_browse_key = QPushButton(self.i18n.t('browse'))
         self.btn_browse_key.setObjectName("btnSecondary")
         self.btn_browse_key.setFixedWidth(85)
         self.btn_browse_key.setVisible(False)
         self.btn_browse_key.clicked.connect(self.on_browse_key_clicked)
-        config_layout.addWidget(self.btn_browse_key, 6, 2)
+        config_layout.addWidget(self.btn_browse_key, 7, 2)
 
         # Remote Path
         self.lbl_remote_path = QLabel(self.i18n.t('remote_path'))
-        config_layout.addWidget(self.lbl_remote_path, 7, 0)
+        config_layout.addWidget(self.lbl_remote_path, 8, 0)
         self.txt_remote_path = QLineEdit()
         self.txt_remote_path.setPlaceholderText(self.i18n.t('remote_path_placeholder'))
         self.txt_remote_path.setToolTip(self.i18n.t('tooltip_remote_path'))
-        config_layout.addWidget(self.txt_remote_path, 7, 1, 1, 2)
+        config_layout.addWidget(self.txt_remote_path, 8, 1, 1, 2)
 
         # Local Drive Letter
         self.lbl_local_drive = QLabel(self.i18n.t('local_drive'))
-        config_layout.addWidget(self.lbl_local_drive, 8, 0)
+        config_layout.addWidget(self.lbl_local_drive, 9, 0)
         self.cmb_drive_letter = QComboBox()
         self.populate_drive_letters()
         self.cmb_drive_letter.setToolTip(self.i18n.t('tooltip_drive_letter'))
-        config_layout.addWidget(self.cmb_drive_letter, 8, 1, 1, 2)
+        config_layout.addWidget(self.cmb_drive_letter, 9, 1, 1, 2)
 
         # Auto-mount & Hide Dotfiles
         self.chk_auto_mount = QCheckBox(self.i18n.t('auto_mount'))
         self.chk_auto_mount.setToolTip(self.i18n.t('tooltip_auto_mount'))
-        config_layout.addWidget(self.chk_auto_mount, 9, 1)
+        config_layout.addWidget(self.chk_auto_mount, 10, 1)
 
         self.chk_hide_dotfiles = QCheckBox(self.i18n.t('hide_dotfiles'))
         self.chk_hide_dotfiles.setToolTip(self.i18n.t('tooltip_hide_dotfiles'))
-        config_layout.addWidget(self.chk_hide_dotfiles, 9, 2)
+        config_layout.addWidget(self.chk_hide_dotfiles, 10, 2)
 
         # File Mode
         self.lbl_filemode = QLabel(self.i18n.t('filemode'))
-        config_layout.addWidget(self.lbl_filemode, 10, 0)
+        config_layout.addWidget(self.lbl_filemode, 11, 0)
         
         filemode_layout = QHBoxLayout()
         self.txt_filemode = QLineEdit()
@@ -635,31 +693,31 @@ class ProfileManagerDialog(QDialog):
         self.btn_help_permissions.clicked.connect(self.show_permissions_help)
         filemode_layout.addWidget(self.btn_help_permissions)
         
-        config_layout.addLayout(filemode_layout, 10, 1, 1, 2)
+        config_layout.addLayout(filemode_layout, 11, 1, 1, 2)
 
         # Directory Mode
         self.lbl_dirmode = QLabel(self.i18n.t('dirmode'))
-        config_layout.addWidget(self.lbl_dirmode, 11, 0)
+        config_layout.addWidget(self.lbl_dirmode, 12, 0)
         self.txt_dirmode = QLineEdit()
         self.txt_dirmode.setPlaceholderText("e.g. 0750")
         self.txt_dirmode.setToolTip(self.i18n.t('tooltip_dirmode'))
-        config_layout.addWidget(self.txt_dirmode, 11, 1, 1, 2)
+        config_layout.addWidget(self.txt_dirmode, 12, 1, 1, 2)
 
         # UID
         self.lbl_uid = QLabel(self.i18n.t('uid'))
-        config_layout.addWidget(self.lbl_uid, 12, 0)
+        config_layout.addWidget(self.lbl_uid, 13, 0)
         self.txt_uid = QLineEdit()
         self.txt_uid.setPlaceholderText("e.g. 1000")
         self.txt_uid.setToolTip(self.i18n.t('tooltip_uid'))
-        config_layout.addWidget(self.txt_uid, 12, 1, 1, 2)
+        config_layout.addWidget(self.txt_uid, 13, 1, 1, 2)
 
         # GID
         self.lbl_gid = QLabel(self.i18n.t('gid'))
-        config_layout.addWidget(self.lbl_gid, 13, 0)
+        config_layout.addWidget(self.lbl_gid, 14, 0)
         self.txt_gid = QLineEdit()
         self.txt_gid.setPlaceholderText("e.g. 1000")
         self.txt_gid.setToolTip(self.i18n.t('tooltip_gid'))
-        config_layout.addWidget(self.txt_gid, 13, 1, 1, 2)
+        config_layout.addWidget(self.txt_gid, 14, 1, 1, 2)
 
         right_layout.addWidget(form_frame)
 
@@ -774,6 +832,13 @@ class ProfileManagerDialog(QDialog):
         is_mounted = drive in self.active_mounts
         self.btn_delete_profile.setEnabled(not is_mounted)
         self.btn_save.setEnabled(not is_mounted)
+
+    def on_user_changed(self, text=""):
+        user_val = text.strip().lower()
+        if user_val == 'root':
+            self.root_warning_card.setVisible(True)
+        else:
+            self.root_warning_card.setVisible(False)
 
     def on_auth_type_changed(self, index):
         if index == 0:  # Password
@@ -1077,8 +1142,9 @@ class MainWindow(QWidget):
         self.is_connecting = False         # Flag para bloquear re-intentos de conexión
         self.log_viewer = None
         self.log_path = os.path.join(self.mounter.app_dir, 'mounts.log')
-        self.known_hosts_viewer = None
         self.active_workers = {}
+        self.update_worker = None
+        self.latest_release_url = "https://github.com/turulomio/sftp_mounter/releases"
 
 
         self.init_ui()
@@ -1087,6 +1153,7 @@ class MainWindow(QWidget):
         self.load_profiles_dashboard()
         
         QTimer.singleShot(500, self.perform_auto_mount)
+        QTimer.singleShot(2000, self.check_updates_auto)
 
     def init_ui(self):
         self.setObjectName("mainWidget")
@@ -1117,10 +1184,10 @@ class MainWindow(QWidget):
         self.act_view_log.triggered.connect(self.on_open_log_viewer)
         self.menu_options.addAction(self.act_view_log)
 
-        # Ver known_hosts
-        self.act_view_known_hosts = QAction(self)
-        self.act_view_known_hosts.triggered.connect(self.on_open_known_hosts_viewer)
-        self.menu_options.addAction(self.act_view_known_hosts)
+        # Abrir directorio del usuario
+        self.act_open_user_dir = QAction(self)
+        self.act_open_user_dir.triggered.connect(self.on_open_user_dir)
+        self.menu_options.addAction(self.act_open_user_dir)
 
         self.menu_options.addSeparator()
 
@@ -1140,6 +1207,13 @@ class MainWindow(QWidget):
         self.menu_help = QMenu(self)
         self.menu_bar.addMenu(self.menu_help)
         
+        # Buscar actualizaciones
+        self.act_check_updates = QAction(self)
+        self.act_check_updates.triggered.connect(self.on_check_updates_clicked)
+        self.menu_help.addAction(self.act_check_updates)
+
+        self.menu_help.addSeparator()
+
         # Acerca de
         self.act_about = QAction(self)
         self.act_about.triggered.connect(self.on_about_clicked)
@@ -1158,6 +1232,63 @@ class MainWindow(QWidget):
         title_layout.addWidget(self.lbl_winfsp_warning)
         
         main_layout.addLayout(title_layout)
+
+        # ----------------- UPDATE CHECK CARD (Conditional, Yellow) -----------------
+        self.update_card = QFrame()
+        self.update_card.setObjectName("updateCard")
+        self.update_card.setStyleSheet("""
+            QFrame#updateCard {
+                background-color: #332d18;
+                border: 1px solid #e6c547;
+                border-radius: 8px;
+            }
+        """)
+        update_card_layout = QHBoxLayout(self.update_card)
+        update_card_layout.setContentsMargins(12, 10, 12, 10)
+        
+        self.lbl_update_status = QLabel()
+        self.lbl_update_status.setStyleSheet("color: #f1fa8c; font-size: 12px; font-weight: bold;")
+        self.lbl_update_status.setWordWrap(True)
+        update_card_layout.addWidget(self.lbl_update_status, 1)
+        
+        self.btn_download_update = QPushButton()
+        self.btn_download_update.setObjectName("btnSecondary")
+        self.btn_download_update.setStyleSheet("""
+            QPushButton {
+                background-color: #e6c547;
+                color: #1a1a24;
+                font-weight: bold;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #f1fa8c;
+            }
+        """)
+        self.btn_download_update.setVisible(False)
+        self.btn_download_update.clicked.connect(self.on_download_update_clicked)
+        update_card_layout.addWidget(self.btn_download_update)
+        
+        self.btn_close_update_card = QPushButton("✕")
+        self.btn_close_update_card.setFixedSize(24, 24)
+        self.btn_close_update_card.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #e6c547;
+                font-weight: bold;
+                border: none;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                color: #ffffff;
+            }
+        """)
+        self.btn_close_update_card.clicked.connect(lambda: self.update_card.setVisible(False))
+        update_card_layout.addWidget(self.btn_close_update_card)
+
+        self.update_card.setVisible(False)
+        main_layout.addWidget(self.update_card)
 
         # ----------------- WinFsp INSTALL CARD (Conditional) -----------------
         self.winfsp_card = QFrame()
@@ -1477,18 +1608,73 @@ class MainWindow(QWidget):
             self.log_viewer.activateWindow()
             self.log_viewer.raise_()
 
-    def on_open_known_hosts_viewer(self):
+    def on_open_user_dir(self):
         """
-        Opens the independent non-modal known_hosts viewer window.
+        Opens the user data directory in the OS default file explorer.
         """
-        if self.known_hosts_viewer is None or not self.known_hosts_viewer.isVisible():
-            self.known_hosts_viewer = KnownHostsViewerDialog(parent=self, i18n=self.i18n)
-            self.known_hosts_viewer.show()
+        user_dir = self.mounter.app_dir
+        os.makedirs(user_dir, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(user_dir))
+
+    def check_updates_auto(self):
+        """
+        Automatically checks for updates every 7 days (604800 seconds).
+        """
+        import time
+        settings = self.config_manager.load_settings()
+        last_check = settings.get('last_update_check', 0)
+        now = time.time()
+        if now - last_check >= 604800:
+            self.run_update_check(is_manual=False)
+
+    def on_check_updates_clicked(self):
+        """
+        Manually triggered update check from the menu.
+        """
+        self.lbl_update_status.setText(self.i18n.t('update_checking'))
+        self.btn_download_update.setVisible(False)
+        self.update_card.setVisible(True)
+        self.run_update_check(is_manual=True)
+
+    def run_update_check(self, is_manual=False):
+        if self.update_worker and self.update_worker.isRunning():
+            return
+        current_version = self.app.applicationVersion() or "1.2.0"
+        self.update_worker = UpdateCheckWorker(current_version=current_version, is_manual=is_manual)
+        self.update_worker.finished_check.connect(self.on_update_check_finished)
+        self.update_worker.start()
+
+    def on_update_check_finished(self, has_update, latest_v, html_url, error_msg, is_manual):
+        import time
+        settings = self.config_manager.load_settings()
+        settings['last_update_check'] = time.time()
+        self.config_manager.save_settings(settings)
+
+        if html_url:
+            self.latest_release_url = html_url
+
+        current_version = self.app.applicationVersion() or "1.2.0"
+
+        if has_update:
+            msg = self.i18n.t('update_available', latest=latest_v, current=current_version)
+            self.lbl_update_status.setText(msg)
+            self.btn_download_update.setText(self.i18n.t('btn_download_update'))
+            self.btn_download_update.setVisible(True)
+            self.update_card.setVisible(True)
         else:
-            self.known_hosts_viewer.activateWindow()
-            self.known_hosts_viewer.raise_()
+            if is_manual:
+                if error_msg:
+                    msg = self.i18n.t('update_check_error')
+                else:
+                    msg = self.i18n.t('update_no_updates', current=current_version)
+                self.lbl_update_status.setText(msg)
+                self.btn_download_update.setVisible(False)
+                self.update_card.setVisible(True)
+            else:
+                self.update_card.setVisible(False)
 
-
+    def on_download_update_clicked(self):
+        QDesktopServices.openUrl(QUrl(self.latest_release_url))
 
     def log_action(self, profile_name: str, message: str):
         """
@@ -1514,11 +1700,14 @@ class MainWindow(QWidget):
         self.menu_options.setTitle(self.i18n.t('menu_options'))
         self.act_manage_profiles.setText(self.i18n.t('manage_profiles'))
         self.act_view_log.setText(self.i18n.t('menu_view_log'))
-        self.act_view_known_hosts.setText(self.i18n.t('menu_view_known_hosts'))
+        self.act_open_user_dir.setText(self.i18n.t('menu_open_user_dir'))
+        self.act_check_updates.setText(self.i18n.t('menu_check_updates'))
         self.act_settings.setText(self.i18n.t('menu_settings'))
         self.act_exit.setText(self.i18n.t('menu_exit'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
         self.act_about.setText(self.i18n.t('about'))
+        if hasattr(self, 'btn_download_update'):
+            self.btn_download_update.setText(self.i18n.t('btn_download_update'))
 
         self.check_winfsp_status()
         if hasattr(self, 'profile_cards'):
