@@ -505,7 +505,8 @@ class ProfileManagerDialog(QDialog):
         self.initial_profile = initial_profile
 
         self.setWindowTitle(self.i18n.t('manage_profiles'))
-        self.setMinimumSize(720, 680)
+        self.setMinimumSize(750, 880)
+        self.resize(750, 880)
         self.setStyleSheet(QSS_STYLE)
 
         self.init_ui()

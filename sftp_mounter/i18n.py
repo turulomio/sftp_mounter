@@ -74,11 +74,11 @@ TRANSLATIONS = {
         'hi': 'लॉग देखें', 'zh': '查看日志', 'ru': 'Просмотр лога',
         'ro': 'Vezi logul'
     },
-    'menu_view_known_hosts': {
-        'es': 'Ver known_hosts', 'en': 'View known_hosts', 'fr': 'Voir known_hosts',
-        'pt': 'Ver known_hosts', 'de': 'known_hosts anzeigen', 'it': 'Visualizza known_hosts',
-        'hi': 'known_hosts देखें', 'zh': '查看 known_hosts', 'ru': 'Просмотр known_hosts',
-        'ro': 'Vezi known_hosts'
+    'menu_open_user_dir': {
+        'es': 'Abrir directorio del usuario', 'en': 'Open user directory', 'fr': 'Ouvrir le dossier de l\'utilisateur',
+        'pt': 'Abrir diretório do usuário', 'de': 'Benutzerverzeichnis öffnen', 'it': 'Apri cartella utente',
+        'hi': 'उपयोगकर्ता निर्देशिका खोलें', 'zh': '打开用户目录', 'ru': 'Открыть папку пользователя',
+        'ro': 'Deschide directorul utilizatorului'
     },
     'known_hosts_title': {
         'es': 'Visor de known_hosts', 'en': 'known_hosts Viewer', 'fr': 'Visionneuse de known_hosts',
