@@ -1,9 +1,23 @@
 import os
 import sys
 import unittest
-from PySide6.QtWidgets import QApplication
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+try:
+    import PySide6
+    pyside_dir = os.path.dirname(PySide6.__file__)
+    if pyside_dir not in os.environ.get('PATH', ''):
+        os.environ['PATH'] = pyside_dir + os.path.pathsep + os.environ.get('PATH', '')
+    if hasattr(os, 'add_dll_directory'):
+        try:
+            os.add_dll_directory(pyside_dir)
+        except Exception:
+            pass
+except Exception:
+    pass
+
+from PySide6.QtWidgets import QApplication
 
 from sftp_mounter.i18n import I18N, SUPPORTED_LANGUAGES
 from sftp_mounter.gui import MainWindow

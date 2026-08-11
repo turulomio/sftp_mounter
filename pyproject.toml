@@ -27,11 +27,12 @@ setup-wine-python = [
     { cmd = "rm python-windows.exe" },
     { cmd = "wine python -m pip install --upgrade pip setuptools wheel" },
     { cmd = "wine python -m pip install PySide6" },
-    { cmd = "wine python -m pip install ." }
+    { cmd = "wine python -m pip install ." },
+    { cmd = "wine reg add \"HKCU\\Environment\" /v PATH /t REG_EXPAND_SZ /d \"%PATH%;C:\\Program Files\\Python310\\lib\\site-packages\\PySide6\" /f" }
 ]
 build-windows-wine = { cmd = "wine python sftp_mounter/package.py" }
 run-wine = { cmd = "wine python sftp_mounter/main.py" }
-test = { cmd = "wine python -m unittest discover tests" }
+test = { cmd = "python -m unittest discover tests" }
 release = { script = "sftp_mounter.release_info:print_release_steps" }
 
 

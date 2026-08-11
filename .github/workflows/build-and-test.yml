@@ -51,7 +51,7 @@ jobs:
           QT_QUICK_BACKEND: software
           QT_QPA_PLATFORM: offscreen
         run: |
-          xvfb-run -a poe test
+          xvfb-run -a wine python -m unittest discover tests
 
       - name: Build Windows Executable under Wine (build-windows-wine)
         env:
