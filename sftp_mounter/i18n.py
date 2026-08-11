@@ -218,6 +218,18 @@ TRANSLATIONS = {
         'hi': 'username', 'zh': '用户名', 'ru': 'имя пользователя',
         'ro': 'nume utilizator'
     },
+    'root_user_warning': {
+        'es': '⚠️ ADVERTENCIA: Usar el usuario "root" mediante SFTP conlleva riesgos elevados y puede producir graves daños en el sistema operativo.',
+        'en': '⚠️ WARNING: Using the "root" user via SFTP carries high risks and could cause severe damage to the operating system.',
+        'fr': '⚠️ AVERTISSEMENT : L\'utilisation de l\'utilisateur "root" via SFTP comporte des risques élevés et peut causer de graves dommages au système d\'exploitation.',
+        'pt': '⚠️ AVISO: Usar o usuário "root" via SFTP envolve altos riscos e pode causar graves danos ao sistema operacional.',
+        'de': '⚠️ WARNUNG: Die Verwendung des Benutzers "root" über SFTP birgt hohe Risiken und kann das Betriebssystem schwer beschädigen.',
+        'it': '⚠️ AVVISO: L\'uso dell\'utente "root" tramite SFTP comporta elevati rischi e può causare gravi danni al sistema operativo.',
+        'hi': '⚠️ चेतावनी: SFTP के माध्यम से "root" उपयोगकर्ता का उपयोग करने से उच्च जोखिम होता है और ऑपरेटिंग सिस्टम को गंभीर नुकसान पहुंच सकता है।',
+        'zh': '⚠️ 警告：通过 SFTP 使用 "root" 用户存在极高风险，可能会对操作系统造成严重破坏。',
+        'ru': '⚠️ ПРЕДУПРЕЖДЕНИЕ: Использование пользователя "root" через SFTP влечет за собой высокий риск и может нанести серьезный вред операционной системе.',
+        'ro': '⚠️ AVERTISMENT: Utilizarea utilizatorului "root" prin SFTP implică riscuri ridicate și poate provoca daune grave sistemului de operare.'
+    },
     'auth': {
         'es': 'Autenticación:', 'en': 'Authentication:', 'fr': 'Authentification:',
         'pt': 'Autenticação:', 'de': 'Authentifizierung:', 'it': 'Autenticazione:',
