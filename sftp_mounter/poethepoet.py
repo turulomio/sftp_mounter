@@ -81,7 +81,7 @@ def setup_wine_python():
 
 def _get_wine_env():
     env = os.environ.copy()
-    winepath = "C:\\Program Files\\Python310;C:\\Program Files\\Python310\\Scripts;C:\\Program Files\\Python310\\lib\\site-packages\\PySide6"
+    winepath = "C:\\Program Files\\Python310;C:\\Program Files\\Python310\\Scripts;C:\\Program Files\\Python310\\lib\\site-packages\\PySide6;C:\\Program Files\\Python310\\lib\\site-packages\\shiboken6"
     if "WINEPATH" in env:
         env["WINEPATH"] = f"{winepath};{env['WINEPATH']}"
     else:

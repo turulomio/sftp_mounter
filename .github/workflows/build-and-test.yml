@@ -54,8 +54,9 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           LIBGL_ALWAYS_SOFTWARE: '1'
           GALLIUM_DRIVER: llvmpipe
+          WINEPATH: 'C:\Program Files\Python310;C:\Program Files\Python310\Scripts;C:\Program Files\Python310\lib\site-packages\PySide6;C:\Program Files\Python310\lib\site-packages\shiboken6'
         run: |
-          xvfb-run -a poe test
+          xvfb-run -a wine python -m unittest discover tests
 
       - name: Build Windows Executable under Wine (build-windows-wine)
         env:
@@ -65,6 +66,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           LIBGL_ALWAYS_SOFTWARE: '1'
           GALLIUM_DRIVER: llvmpipe
+          WINEPATH: 'C:\Program Files\Python310;C:\Program Files\Python310\Scripts;C:\Program Files\Python310\lib\site-packages\PySide6;C:\Program Files\Python310\lib\site-packages\shiboken6'
         run: |
           xvfb-run -a poe build-windows-wine
 
