@@ -28,8 +28,8 @@ setup-wine-python = [
     { cmd = "wine python -m pip install --upgrade pip setuptools wheel" },
     { cmd = "wine python -m pip install PySide6" },
     { cmd = "wine python -m pip install ." },
-    { cmd = "wine cmd /c copy /y \"C:\\Program Files\\Python310\\lib\\site-packages\\PySide6\\*.dll\" \"C:\\Program Files\\Python310\\\"" },
-    { cmd = "wine cmd /c xcopy /e /i /y \"C:\\Program Files\\Python310\\lib\\site-packages\\PySide6\\plugins\" \"C:\\Program Files\\Python310\\plugins\"" }
+    { cmd = 'wine cmd /c copy /y "C:\Program Files\Python310\lib\site-packages\PySide6\*.dll" "C:\Program Files\Python310"' },
+    { cmd = 'wine cmd /c xcopy /e /i /y "C:\Program Files\Python310\lib\site-packages\PySide6\plugins" "C:\Program Files\Python310\plugins"' }
 ]
 build-windows-wine = { cmd = "wine python sftp_mounter/package.py" }
 run-wine = { cmd = "wine python sftp_mounter/main.py" }
