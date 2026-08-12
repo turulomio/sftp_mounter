@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 
-from sftp_mounter.package import calculate_sha256, download_file
+from sftp_mounter.package import calculate_sha256, download_file, get_project_version
 
 class TestPackage(unittest.TestCase):
     def setUp(self):
@@ -13,6 +13,10 @@ class TestPackage(unittest.TestCase):
     def tearDown(self):
         import shutil
         shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_get_project_version(self):
+        version = get_project_version()
+        self.assertEqual(version, "1.3.0")
 
     def test_calculate_sha256(self):
         test_file = os.path.join(self.test_dir, 'sample.txt')

@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 from sftp_mounter.config_manager import ConfigManager
 from sftp_mounter.mounter import Mounter
 from sftp_mounter.i18n import I18N, SUPPORTED_LANGUAGES
+from sftp_mounter import __version__
 
 logger = logging.getLogger("SFTPMounter.GUI")
 
@@ -72,7 +73,7 @@ def parse_version(v_str: str):
 class UpdateCheckWorker(QThread):
     finished_check = Signal(bool, dict, str, bool)  # (has_any_update, results_dict, error_msg, is_manual)
 
-    def __init__(self, current_app_v="1.2.0", current_winfsp_v="Unknown", current_rclone_v="Unknown", is_manual=False):
+    def __init__(self, current_app_v=__version__, current_winfsp_v="Unknown", current_rclone_v="Unknown", is_manual=False):
         super().__init__()
         self.current_app_v = current_app_v
         self.current_winfsp_v = current_winfsp_v
@@ -1467,7 +1468,7 @@ class MainWindow(QWidget):
 
         # Header Title Layout
         title_layout = QHBoxLayout()
-        self.lbl_title = QLabel("SFTP Mounter")
+        self.lbl_title = QLabel(f"SFTP Mounter v{__version__}")
         self.lbl_title.setObjectName("titleLabel")
         title_layout.addWidget(self.lbl_title)
         
@@ -1885,7 +1886,7 @@ class MainWindow(QWidget):
     def run_update_check(self, is_manual=False):
         if self.update_worker and self.update_worker.isRunning():
             return
-        current_app_v = self.app.applicationVersion() or "1.2.0"
+        current_app_v = self.app.applicationVersion() or __version__
         current_winfsp_v = self.mounter.get_winfsp_version()
         current_rclone_v = self.mounter.get_rclone_version()
         self.update_worker = UpdateCheckWorker(
@@ -1964,8 +1965,8 @@ class MainWindow(QWidget):
             logger.error(f"Failed to write to mounts.log: {e}")
 
     def retranslate_ui(self):
-        self.setWindowTitle(self.i18n.t('title'))
-        self.lbl_title.setText(self.i18n.t('title'))
+        self.setWindowTitle(f"{self.i18n.t('title')} v{__version__}")
+        self.lbl_title.setText(f"{self.i18n.t('title')} v{__version__}")
         self.lbl_winfsp_missing.setText(self.i18n.t('winfsp_missing_card'))
         self.btn_install_winfsp.setText(self.i18n.t('install_winfsp'))
 

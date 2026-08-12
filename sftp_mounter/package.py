@@ -230,12 +230,15 @@ def setup_binaries():
         print("SVG logo copied to build/bin.")
 
 
-def get_project_version() -> str:
+def get_project_version():
     """
-    Dynamically retrieves the project version defined in the pyproject.toml file.
+    Dynamically retrieves the project version defined in pyproject.toml or __init__.py file.
+    Prioritizes reading source files over site-packages import to prevent stale version resolution.
     """
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    # 1. Read pyproject.toml
     try:
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         toml_path = os.path.join(project_root, 'pyproject.toml')
         if os.path.exists(toml_path):
             with open(toml_path, 'r', encoding='utf-8') as f:
@@ -246,6 +249,27 @@ def get_project_version() -> str:
                             return parts[1].strip().strip('"').strip("'")
     except Exception:
         pass
+
+    # 2. Read sftp_mounter/__init__.py
+    try:
+        init_path = os.path.join(project_root, 'sftp_mounter', '__init__.py')
+        if os.path.exists(init_path):
+            with open(init_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if '__version__' in line and '=' in line:
+                        parts = line.split('=')
+                        if len(parts) >= 2:
+                            return parts[1].strip().strip('"').strip("'")
+    except Exception:
+        pass
+
+    # 3. Fallback import
+    try:
+        from sftp_mounter import __version__
+        return __version__
+    except Exception:
+        pass
+
     return "1.0.0"
 
 
@@ -257,6 +281,12 @@ def run_packaging():
     
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(project_root)
+
+    print("Updating installed package in Python environment to current workspace code...")
+    try:
+        subprocess.run([sys.executable, "-m", "pip", "install", "--no-deps", "."], check=True)
+    except Exception as e:
+        print(f"Warning: Failed to sync local package via pip: {e}")
 
     version = get_project_version()
     exe_name = f"SFTPMounter-v{version}"

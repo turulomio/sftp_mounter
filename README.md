@@ -1,6 +1,6 @@
 # 🚀 SFTP Mounter
 
-[![Build and Test](https://github.com/turulomio/sftp_mounter/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/turulomio/sftp_mounter/actions/workflows/build-and-test.yml)
+[![Build and Test](https://github.com/turulomio/sftp_mounter/actions/workflows/build-and-test.yml/badge.svg?branch=main)](https://github.com/turulomio/sftp_mounter/actions/workflows/build-and-test.yml)
 [![OS: Windows](https://img.shields.io/badge/OS-Windows%2010%20%2F%2011-blue?logo=windows)](https://www.microsoft.com/windows)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/turulomio/sftp_mounter/total?logo=github)](https://github.com/turulomio/sftp_mounter/releases)
