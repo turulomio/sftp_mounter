@@ -2,6 +2,7 @@
 Poe the Poet task script handlers for SFTP Mounter.
 """
 
+import os
 import sys
 import subprocess
 
@@ -78,13 +79,23 @@ def setup_wine_python():
             sys.exit(res.returncode)
 
 
+def _get_wine_env():
+    env = os.environ.copy()
+    winepath = "C:\\Program Files\\Python310;C:\\Program Files\\Python310\\Scripts;C:\\Program Files\\Python310\\lib\\site-packages\\PySide6"
+    if "WINEPATH" in env:
+        env["WINEPATH"] = f"{winepath};{env['WINEPATH']}"
+    else:
+        env["WINEPATH"] = winepath
+    return env
+
+
 def build_windows_wine():
     """
     Executes the PyInstaller packaging script under Wine.
     """
     cmd = "wine python sftp_mounter/package.py"
     print(f"--> Executing: {cmd}")
-    res = subprocess.run(cmd, shell=True)
+    res = subprocess.run(cmd, shell=True, env=_get_wine_env())
     if res.returncode != 0:
         sys.exit(res.returncode)
 
@@ -95,7 +106,7 @@ def run_wine():
     """
     cmd = "wine python sftp_mounter/main.py"
     print(f"--> Executing: {cmd}")
-    res = subprocess.run(cmd, shell=True)
+    res = subprocess.run(cmd, shell=True, env=_get_wine_env())
     if res.returncode != 0:
         sys.exit(res.returncode)
 
@@ -106,7 +117,7 @@ def test():
     """
     cmd = "wine python -m unittest discover tests"
     print(f"--> Executing: {cmd}")
-    res = subprocess.run(cmd, shell=True)
+    res = subprocess.run(cmd, shell=True, env=_get_wine_env())
     if res.returncode != 0:
         sys.exit(res.returncode)
 
