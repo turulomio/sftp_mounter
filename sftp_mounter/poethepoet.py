@@ -128,16 +128,16 @@ def test():
     Runs the unit test suite with coverage report. Uses wine on Linux, native python on Windows.
     """
     if sys.platform == "win32":
-        cmd_run = f'"{sys.executable}" -m coverage run --source=sftp_mounter -m unittest discover tests'
-        cmd_report = f'"{sys.executable}" -m coverage report -m'
+        cmd_run = f'"{sys.executable}" -m coverage run --source=sftp_mounter --omit="*/poethepoet.py" -m unittest discover tests'
+        cmd_report = f'"{sys.executable}" -m coverage report --omit="*/poethepoet.py" -m'
         print(f"--> Executing (Native Windows): {cmd_run}")
         res = subprocess.run(cmd_run, shell=True)
         if res.returncode == 0:
             print(f"--> Executing (Native Windows): {cmd_report}")
             subprocess.run(cmd_report, shell=True)
     else:
-        cmd_run = "wine python -m coverage run --source=sftp_mounter -m unittest discover tests"
-        cmd_report = "wine python -m coverage report -m"
+        cmd_run = 'wine python -m coverage run --source=sftp_mounter --omit="*/poethepoet.py" -m unittest discover tests'
+        cmd_report = 'wine python -m coverage report --omit="*/poethepoet.py" -m'
         print(f"--> Executing (Wine): {cmd_run}")
         res = subprocess.run(cmd_run, shell=True, env=_get_wine_env())
         if res.returncode == 0:
