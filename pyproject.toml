@@ -13,6 +13,7 @@ PySide6 = "^6.0.0"
 [tool.poetry.group.dev.dependencies]
 pyinstaller = "^6.0.0"
 poethepoet = "^0.24.0"
+coverage = "^7.0.0"
 
 [tool.poetry.scripts]
 sftp-mounter = "sftp_mounter.main:main"
