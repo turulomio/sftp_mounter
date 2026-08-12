@@ -188,6 +188,78 @@ TRANSLATIONS = {
         'hi': 'हटाएं', 'zh': '删除', 'ru': 'Удалить',
         'ro': 'Șterge'
     },
+    'menu_open_user_dir': {
+        'es': 'Abrir directorio del usuario', 'en': 'Open user directory', 'fr': 'Ouvrir le dossier de l\'utilisateur',
+        'pt': 'Abrir diretório do usuário', 'de': 'Benutzerverzeichnis öffnen', 'it': 'Apri cartella utente',
+        'hi': 'उपयोगकर्ता निर्देशिका खोलें', 'zh': '打开用户目录', 'ru': 'Открыть папку пользователя',
+        'ro': 'Deschide directorul utilizatorului'
+    },
+    'menu_check_updates': {
+        'es': 'Buscar actualizaciones', 'en': 'Check for updates', 'fr': 'Vérifier les mises à jour',
+        'pt': 'Verificar atualizações', 'de': 'Nach Updates suchen', 'it': 'Controlla aggiornamenti',
+        'hi': 'अपडेट की जांच करें', 'zh': '检查更新', 'ru': 'Проверить обновления',
+        'ro': 'Caută actualizări'
+    },
+    'update_available': {
+        'es': '🎉 ¡Nueva versión disponible: v{latest}! (Versión actual: v{current})',
+        'en': '🎉 New version available: v{latest}! (Current: v{current})',
+        'fr': '🎉 Nouvelle version disponible : v{latest} ! (Actuelle : v{current})',
+        'pt': '🎉 Nova versão disponível: v{latest}! (Atual: v{current})',
+        'de': '🎉 Neue Version verfügbar: v{latest}! (Aktuell: v{current})',
+        'it': '🎉 Nuova versione disponibile: v{latest}! (Attuale: v{current})',
+        'hi': '🎉 नया संस्करण उपलब्ध है: v{latest}! (वर्तमान: v{current})',
+        'zh': '🎉 有新版本可用：v{latest}！（当前版本：v{current}）',
+        'ru': '🎉 Доступна новая версия: v{latest}! (Текущая: v{current})',
+        'ro': '🎉 Versiune nouă disponibilă: v{latest}! (Curentă: v{current})'
+    },
+    'update_no_updates': {
+        'es': 'SFTP Mounter está actualizado (v{current}).',
+        'en': 'SFTP Mounter is up to date (v{current}).',
+        'fr': 'SFTP Mounter est à jour (v{current}).',
+        'pt': 'O SFTP Mounter está atualizado (v{current}).',
+        'de': 'SFTP Mounter ist auf dem neuesten Stand (v{current}).',
+        'it': 'SFTP Mounter è aggiornato (v{current}).',
+        'hi': 'SFTP Mounter अद्यतन है (v{current})।',
+        'zh': 'SFTP Mounter 已是最新版本 (v{current})。',
+        'ru': 'SFTP Mounter обновлен до последней версии (v{current}).',
+        'ro': 'SFTP Mounter este la zi (v{current}).'
+    },
+    'update_check_error': {
+        'es': 'No se pudo comprobar si hay actualizaciones.',
+        'en': 'Could not check for updates.',
+        'fr': 'Impossible de vérifier les mises à jour.',
+        'pt': 'Não foi possível verificar atualizações.',
+        'de': 'Fehler beim Suchen nach Updates.',
+        'it': 'Impossibile verificare gli aggiornamenti.',
+        'hi': 'अपडेट की जांच करने में असमर्थ।',
+        'zh': '无法检查更新。',
+        'ru': 'Не удалось проверить обновления.',
+        'ro': 'Nu s-a putut verifica actualizarea.'
+    },
+    'update_checking': {
+        'es': 'Buscando actualizaciones...',
+        'en': 'Checking for updates...',
+        'fr': 'Recherche de mises à jour...',
+        'pt': 'Verificando atualizações...',
+        'de': 'Suche nach Updates...',
+        'it': 'Ricerca aggiornamenti...',
+        'hi': 'अपडेट खोजे जा रहे हैं...',
+        'zh': '正在检查更新...',
+        'ru': 'Поиск обновлений...',
+        'ro': 'Se caută actualizări...'
+    },
+    'btn_download_update': {
+        'es': 'Descargar',
+        'en': 'Download',
+        'fr': 'Télécharger',
+        'pt': 'Baixar',
+        'de': 'Herunterladen',
+        'it': 'Scarica',
+        'hi': 'डाउनलोड',
+        'zh': '下载',
+        'ru': 'Скачать',
+        'ro': 'Descarcă'
+    },
     'host': {
         'es': 'Servidor (Host):', 'en': 'Server (Host):', 'fr': 'Serveur (Hôte):',
         'pt': 'Servidor (Host):', 'de': 'Server (Host):', 'it': 'Server (Host):',

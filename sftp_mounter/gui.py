@@ -62,6 +62,42 @@ class UnmountWorker(QThread):
         self.finished.emit(success)
 
 
+def parse_version(v_str: str):
+    import re
+    clean_v = str(v_str).strip().lstrip('v')
+    parts = re.findall(r'\d+', clean_v)
+    return tuple(int(p) for p in parts) if parts else (0,)
+
+
+class UpdateCheckWorker(QThread):
+    finished_check = Signal(bool, str, str, str, bool)  # (has_update, latest_version, release_url, error_msg, is_manual)
+
+    def __init__(self, current_version="1.2.0", is_manual=False):
+        super().__init__()
+        self.current_version = current_version
+        self.is_manual = is_manual
+
+    def run(self):
+        import urllib.request
+        import json
+        url = "https://api.github.com/repos/turulomio/sftp_mounter/releases/latest"
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'SFTPMounter'})
+            with urllib.request.urlopen(req, timeout=8) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode('utf-8'))
+                    tag_name = data.get('tag_name', '').strip()
+                    html_url = data.get('html_url', 'https://github.com/turulomio/sftp_mounter/releases')
+                    
+                    latest_v = tag_name.lstrip('v')
+                    has_update = parse_version(latest_v) > parse_version(self.current_version)
+                    self.finished_check.emit(has_update, latest_v, html_url, "", self.is_manual)
+                else:
+                    self.finished_check.emit(False, "", "", f"HTTP {response.status}", self.is_manual)
+        except Exception as e:
+            self.finished_check.emit(False, "", "", str(e), self.is_manual)
+
+
 # Premium QSS Style Sheet (Dark Mode)
 QSS_STYLE = """
 QMainWindow, QWidget#mainWidget {
@@ -1108,6 +1144,8 @@ class MainWindow(QWidget):
         self.log_viewer = None
         self.log_path = os.path.join(self.mounter.app_dir, 'mounts.log')
         self.active_workers = {}
+        self.update_worker = None
+        self.latest_release_url = "https://github.com/turulomio/sftp_mounter/releases"
 
 
         self.init_ui()
@@ -1116,6 +1154,7 @@ class MainWindow(QWidget):
         self.load_profiles_dashboard()
         
         QTimer.singleShot(500, self.perform_auto_mount)
+        QTimer.singleShot(2000, self.check_updates_auto)
 
     def init_ui(self):
         self.setObjectName("mainWidget")
@@ -1169,6 +1208,13 @@ class MainWindow(QWidget):
         self.menu_help = QMenu(self)
         self.menu_bar.addMenu(self.menu_help)
         
+        # Buscar actualizaciones
+        self.act_check_updates = QAction(self)
+        self.act_check_updates.triggered.connect(self.on_check_updates_clicked)
+        self.menu_help.addAction(self.act_check_updates)
+
+        self.menu_help.addSeparator()
+
         # Acerca de
         self.act_about = QAction(self)
         self.act_about.triggered.connect(self.on_about_clicked)
@@ -1187,6 +1233,63 @@ class MainWindow(QWidget):
         title_layout.addWidget(self.lbl_winfsp_warning)
         
         main_layout.addLayout(title_layout)
+
+        # ----------------- UPDATE CHECK CARD (Conditional, Yellow) -----------------
+        self.update_card = QFrame()
+        self.update_card.setObjectName("updateCard")
+        self.update_card.setStyleSheet("""
+            QFrame#updateCard {
+                background-color: #332d18;
+                border: 1px solid #e6c547;
+                border-radius: 8px;
+            }
+        """)
+        update_card_layout = QHBoxLayout(self.update_card)
+        update_card_layout.setContentsMargins(12, 10, 12, 10)
+        
+        self.lbl_update_status = QLabel()
+        self.lbl_update_status.setStyleSheet("color: #f1fa8c; font-size: 12px; font-weight: bold;")
+        self.lbl_update_status.setWordWrap(True)
+        update_card_layout.addWidget(self.lbl_update_status, 1)
+        
+        self.btn_download_update = QPushButton()
+        self.btn_download_update.setObjectName("btnSecondary")
+        self.btn_download_update.setStyleSheet("""
+            QPushButton {
+                background-color: #e6c547;
+                color: #1a1a24;
+                font-weight: bold;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #f1fa8c;
+            }
+        """)
+        self.btn_download_update.setVisible(False)
+        self.btn_download_update.clicked.connect(self.on_download_update_clicked)
+        update_card_layout.addWidget(self.btn_download_update)
+        
+        self.btn_close_update_card = QPushButton("✕")
+        self.btn_close_update_card.setFixedSize(24, 24)
+        self.btn_close_update_card.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #e6c547;
+                font-weight: bold;
+                border: none;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                color: #ffffff;
+            }
+        """)
+        self.btn_close_update_card.clicked.connect(lambda: self.update_card.setVisible(False))
+        update_card_layout.addWidget(self.btn_close_update_card)
+
+        self.update_card.setVisible(False)
+        main_layout.addWidget(self.update_card)
 
         # ----------------- WinFsp INSTALL CARD (Conditional) -----------------
         self.winfsp_card = QFrame()
@@ -1514,6 +1617,66 @@ class MainWindow(QWidget):
         os.makedirs(user_dir, exist_ok=True)
         QDesktopServices.openUrl(QUrl.fromLocalFile(user_dir))
 
+    def check_updates_auto(self):
+        """
+        Automatically checks for updates every 7 days (604800 seconds).
+        """
+        import time
+        settings = self.config_manager.load_settings()
+        last_check = settings.get('last_update_check', 0)
+        now = time.time()
+        if now - last_check >= 604800:
+            self.run_update_check(is_manual=False)
+
+    def on_check_updates_clicked(self):
+        """
+        Manually triggered update check from the menu.
+        """
+        self.lbl_update_status.setText(self.i18n.t('update_checking'))
+        self.btn_download_update.setVisible(False)
+        self.update_card.setVisible(True)
+        self.run_update_check(is_manual=True)
+
+    def run_update_check(self, is_manual=False):
+        if self.update_worker and self.update_worker.isRunning():
+            return
+        current_version = self.app.applicationVersion() or "1.2.0"
+        self.update_worker = UpdateCheckWorker(current_version=current_version, is_manual=is_manual)
+        self.update_worker.finished_check.connect(self.on_update_check_finished)
+        self.update_worker.start()
+
+    def on_update_check_finished(self, has_update, latest_v, html_url, error_msg, is_manual):
+        import time
+        settings = self.config_manager.load_settings()
+        settings['last_update_check'] = time.time()
+        self.config_manager.save_settings(settings)
+
+        if html_url:
+            self.latest_release_url = html_url
+
+        current_version = self.app.applicationVersion() or "1.2.0"
+
+        if has_update:
+            msg = self.i18n.t('update_available', latest=latest_v, current=current_version)
+            self.lbl_update_status.setText(msg)
+            self.btn_download_update.setText(self.i18n.t('btn_download_update'))
+            self.btn_download_update.setVisible(True)
+            self.update_card.setVisible(True)
+        else:
+            if is_manual:
+                if error_msg:
+                    msg = self.i18n.t('update_check_error')
+                else:
+                    msg = self.i18n.t('update_no_updates', current=current_version)
+                self.lbl_update_status.setText(msg)
+                self.btn_download_update.setVisible(False)
+                self.update_card.setVisible(True)
+            else:
+                self.update_card.setVisible(False)
+
+    def on_download_update_clicked(self):
+        QDesktopServices.openUrl(QUrl(self.latest_release_url))
+
     def log_action(self, profile_name: str, message: str):
         """
         Registers a mount event in the log file with ISO datetime format, mount name, and log message.
@@ -1539,10 +1702,13 @@ class MainWindow(QWidget):
         self.act_manage_profiles.setText(self.i18n.t('manage_profiles'))
         self.act_view_log.setText(self.i18n.t('menu_view_log'))
         self.act_open_user_dir.setText(self.i18n.t('menu_open_user_dir'))
+        self.act_check_updates.setText(self.i18n.t('menu_check_updates'))
         self.act_settings.setText(self.i18n.t('menu_settings'))
         self.act_exit.setText(self.i18n.t('menu_exit'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
         self.act_about.setText(self.i18n.t('about'))
+        if hasattr(self, 'btn_download_update'):
+            self.btn_download_update.setText(self.i18n.t('btn_download_update'))
 
         self.check_winfsp_status()
         if hasattr(self, 'profile_cards'):
