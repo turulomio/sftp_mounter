@@ -101,9 +101,9 @@ def run_wine():
 
 def test():
     """
-    Runs the unit test suite.
+    Runs the unit test suite under Wine Windows environment.
     """
-    cmd = f"{sys.executable} -m unittest discover tests"
+    cmd = "wine python -m unittest discover tests"
     print(f"--> Executing: {cmd}")
     res = subprocess.run(cmd, shell=True)
     if res.returncode != 0:

@@ -2471,6 +2471,9 @@ class MainWindow(QWidget):
         """
         Determina si el inicio automático está habilitado consultando el registro de Windows.
         """
+        if sys.platform != "win32":
+            return False
+
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
         try:
             import winreg
@@ -2490,6 +2493,9 @@ class MainWindow(QWidget):
         """
         Agrega o remueve la clave del registro de Windows para controlar el inicio automático.
         """
+        if sys.platform != "win32":
+            return False
+
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
         try:
             import winreg

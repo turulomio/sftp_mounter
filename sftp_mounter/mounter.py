@@ -156,6 +156,9 @@ class Mounter:
         Returns:
             bool: True if installed, False otherwise.
         """
+        if sys.platform != "win32":
+            return False
+
         # Strategy 1: Windows Registry Inspection (InstallDir)
         try:
             import winreg
@@ -688,7 +691,7 @@ class Mounter:
         Returns:
             str: Detected WinFsp version (e.g. "2.0.23075"), or "Not installed".
         """
-        if not self.is_winfsp_installed():
+        if sys.platform != "win32" or not self.is_winfsp_installed():
             return "Not installed"
             
         try:
