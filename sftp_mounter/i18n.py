@@ -140,6 +140,36 @@ TRANSLATIONS = {
         'hi': 'लॉग साफ़ करने में त्रुटि: {error}', 'zh': '清除日志时出错: {error}', 'ru': 'Ошибка очистки логов: {error}',
         'ro': 'Eroare la curățarea logurilor: {error}'
     },
+    'winfsp_not_installed': {
+        'es': 'WinFsp: No instalado', 'en': 'WinFsp: Not installed', 'fr': 'WinFsp: Non installé',
+        'pt': 'WinFsp: Não instalado', 'de': 'WinFsp: Nicht installiert', 'it': 'WinFsp: Non installato',
+        'hi': 'WinFsp: स्थापित नहीं है', 'zh': 'WinFsp: 未安装', 'ru': 'WinFsp: Не установлен',
+        'ro': 'WinFsp: Neinstalat'
+    },
+    'winfsp_rclone_header_ok': {
+        'es': 'WinFsp: {winfsp} | Rclone: {rclone}',
+        'en': 'WinFsp: {winfsp} | Rclone: {rclone}',
+        'fr': 'WinFsp : {winfsp} | Rclone : {rclone}',
+        'pt': 'WinFsp: {winfsp} | Rclone: {rclone}',
+        'de': 'WinFsp: {winfsp} | Rclone: {rclone}',
+        'it': 'WinFsp: {winfsp} | Rclone: {rclone}',
+        'hi': 'WinFsp: {winfsp} | Rclone: {rclone}',
+        'zh': 'WinFsp: {winfsp} | Rclone: {rclone}',
+        'ru': 'WinFsp: {winfsp} | Rclone: {rclone}',
+        'ro': 'WinFsp: {winfsp} | Rclone: {rclone}'
+    },
+    'winfsp_rclone_header_missing': {
+        'es': '⚠️ WinFsp: No instalado | Rclone: {rclone}',
+        'en': '⚠️ WinFsp: Not installed | Rclone: {rclone}',
+        'fr': '⚠️ WinFsp : Non installé | Rclone : {rclone}',
+        'pt': '⚠️ WinFsp: Não instalado | Rclone: {rclone}',
+        'de': '⚠️ WinFsp: Nicht installiert | Rclone: {rclone}',
+        'it': '⚠️ WinFsp: Non installato | Rclone: {rclone}',
+        'hi': '⚠️ WinFsp: इंस्टॉल नहीं है | Rclone: {rclone}',
+        'zh': '⚠️ WinFsp: 未安装 | Rclone: {rclone}',
+        'ru': '⚠️ WinFsp: Не установлен | Rclone: {rclone}',
+        'ro': '⚠️ WinFsp: Neinstalat | Rclone: {rclone}'
+    },
     'menu_help': {
         'es': 'Ayuda', 'en': 'Help', 'fr': 'Aide',
         'pt': 'Ajuda', 'de': 'Hilfe', 'it': 'Aiuto',

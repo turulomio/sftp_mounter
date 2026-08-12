@@ -662,8 +662,10 @@ class Mounter:
             return "Not detected"
             
         try:
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo = None
+            if sys.platform == "win32":
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 
             res = subprocess.run([self.rclone_exe, 'version'], capture_output=True, text=True, startupinfo=startupinfo)
             lines = res.stdout.splitlines()

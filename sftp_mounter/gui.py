@@ -70,32 +70,70 @@ def parse_version(v_str: str):
 
 
 class UpdateCheckWorker(QThread):
-    finished_check = Signal(bool, str, str, str, bool)  # (has_update, latest_version, release_url, error_msg, is_manual)
+    finished_check = Signal(bool, dict, str, bool)  # (has_any_update, results_dict, error_msg, is_manual)
 
-    def __init__(self, current_version="1.2.0", is_manual=False):
+    def __init__(self, current_app_v="1.2.0", current_winfsp_v="Unknown", current_rclone_v="Unknown", is_manual=False):
         super().__init__()
-        self.current_version = current_version
+        self.current_app_v = current_app_v
+        self.current_winfsp_v = current_winfsp_v
+        self.current_rclone_v = current_rclone_v
         self.is_manual = is_manual
 
-    def run(self):
+    def _fetch_release(self, repo_url):
         import urllib.request
         import json
-        url = "https://api.github.com/repos/turulomio/sftp_mounter/releases/latest"
         try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'SFTPMounter'})
-            with urllib.request.urlopen(req, timeout=8) as response:
+            req = urllib.request.Request(repo_url, headers={'User-Agent': 'SFTPMounter'})
+            with urllib.request.urlopen(req, timeout=6) as response:
                 if response.status == 200:
                     data = json.loads(response.read().decode('utf-8'))
-                    tag_name = data.get('tag_name', '').strip()
-                    html_url = data.get('html_url', 'https://github.com/turulomio/sftp_mounter/releases')
-                    
-                    latest_v = tag_name.lstrip('v')
-                    has_update = parse_version(latest_v) > parse_version(self.current_version)
-                    self.finished_check.emit(has_update, latest_v, html_url, "", self.is_manual)
-                else:
-                    self.finished_check.emit(False, "", "", f"HTTP {response.status}", self.is_manual)
+                    tag = data.get('tag_name', '').strip()
+                    html_url = data.get('html_url', '')
+                    return tag, html_url
         except Exception as e:
-            self.finished_check.emit(False, "", "", str(e), self.is_manual)
+            logger.warning(f"Error fetching release from {repo_url}: {e}")
+        return "", ""
+
+    def run(self):
+        results = {
+            'app': {'name': 'SFTP Mounter', 'current': self.current_app_v, 'latest': '', 'url': '', 'has_update': False},
+            'winfsp': {'name': 'WinFsp', 'current': self.current_winfsp_v, 'latest': '', 'url': '', 'has_update': False},
+            'rclone': {'name': 'Rclone', 'current': self.current_rclone_v, 'latest': '', 'url': '', 'has_update': False}
+        }
+
+        # SFTP Mounter
+        app_tag, app_url = self._fetch_release("https://api.github.com/repos/turulomio/sftp_mounter/releases/latest")
+        if app_tag:
+            latest_v = app_tag.lstrip('v')
+            results['app']['latest'] = latest_v
+            results['app']['url'] = app_url or "https://github.com/turulomio/sftp_mounter/releases"
+            if parse_version(latest_v) > parse_version(self.current_app_v):
+                results['app']['has_update'] = True
+
+        # WinFsp
+        winfsp_tag, winfsp_url = self._fetch_release("https://api.github.com/repos/winfsp/winfsp/releases/latest")
+        if winfsp_tag:
+            latest_v = winfsp_tag.lstrip('v')
+            results['winfsp']['latest'] = latest_v
+            results['winfsp']['url'] = winfsp_url or "https://github.com/winfsp/winfsp/releases"
+            if self.current_winfsp_v and self.current_winfsp_v not in ("Not installed", "Unknown"):
+                current_clean = self.current_winfsp_v.lstrip('v')
+                if parse_version(latest_v) > parse_version(current_clean):
+                    results['winfsp']['has_update'] = True
+
+        # Rclone
+        rclone_tag, rclone_url = self._fetch_release("https://api.github.com/repos/rclone/rclone/releases/latest")
+        if rclone_tag:
+            latest_v = rclone_tag.lstrip('v')
+            results['rclone']['latest'] = latest_v
+            results['rclone']['url'] = rclone_url or "https://github.com/rclone/rclone/releases"
+            if self.current_rclone_v and self.current_rclone_v not in ("Not detected", "Unknown"):
+                current_clean = self.current_rclone_v.lstrip('v')
+                if parse_version(latest_v) > parse_version(current_clean):
+                    results['rclone']['has_update'] = True
+
+        has_any_update = (results['app']['has_update'] or results['winfsp']['has_update'] or results['rclone']['has_update'])
+        self.finished_check.emit(has_any_update, results, "", self.is_manual)
 
 
 # Premium QSS Style Sheet (Dark Mode)
@@ -1640,39 +1678,66 @@ class MainWindow(QWidget):
     def run_update_check(self, is_manual=False):
         if self.update_worker and self.update_worker.isRunning():
             return
-        current_version = self.app.applicationVersion() or "1.2.0"
-        self.update_worker = UpdateCheckWorker(current_version=current_version, is_manual=is_manual)
+        current_app_v = self.app.applicationVersion() or "1.2.0"
+        current_winfsp_v = self.mounter.get_winfsp_version()
+        current_rclone_v = self.mounter.get_rclone_version()
+        self.update_worker = UpdateCheckWorker(
+            current_app_v=current_app_v,
+            current_winfsp_v=current_winfsp_v,
+            current_rclone_v=current_rclone_v,
+            is_manual=is_manual
+        )
         self.update_worker.finished_check.connect(self.on_update_check_finished)
         self.update_worker.start()
 
-    def on_update_check_finished(self, has_update, latest_v, html_url, error_msg, is_manual):
+    def on_update_check_finished(self, has_any_update, results, error_msg, is_manual):
         import time
         settings = self.config_manager.load_settings()
         settings['last_update_check'] = time.time()
         self.config_manager.save_settings(settings)
 
-        if html_url:
-            self.latest_release_url = html_url
+        app_info = results.get('app', {})
+        winfsp_info = results.get('winfsp', {})
+        rclone_info = results.get('rclone', {})
 
-        current_version = self.app.applicationVersion() or "1.2.0"
+        if app_info.get('url'):
+            self.latest_release_url = app_info['url']
 
-        if has_update:
-            msg = self.i18n.t('update_available', latest=latest_v, current=current_version)
-            self.lbl_update_status.setText(msg)
+        lines = []
+
+        # App status
+        if app_info.get('has_update'):
+            lines.append(f"🎉 <b>SFTP Mounter:</b> Nueva versión v{app_info['latest']} disponible (Actual: v{app_info['current']})")
+        else:
+            lines.append(f"✓ <b>SFTP Mounter:</b> v{app_info['current']} (Actualizado)")
+
+        # WinFsp status
+        if winfsp_info.get('has_update'):
+            lines.append(f"⚠️ <b>WinFsp:</b> Nueva versión {winfsp_info['latest']} disponible (Actual: {winfsp_info['current']})")
+        else:
+            winfsp_curr = winfsp_info.get('current', 'Desconocido')
+            lines.append(f"✓ <b>WinFsp:</b> {winfsp_curr} (Actualizado)")
+
+        # Rclone status
+        if rclone_info.get('has_update'):
+            lines.append(f"⚠️ <b>Rclone:</b> Nueva versión {rclone_info['latest']} disponible (Actual: {rclone_info['current']})")
+        else:
+            rclone_curr = rclone_info.get('current', 'Desconocido')
+            lines.append(f"✓ <b>Rclone:</b> {rclone_curr} (Actualizado)")
+
+        status_html = "<br>".join(lines)
+        self.lbl_update_status.setText(status_html)
+
+        if app_info.get('has_update'):
             self.btn_download_update.setText(self.i18n.t('btn_download_update'))
             self.btn_download_update.setVisible(True)
+        else:
+            self.btn_download_update.setVisible(False)
+
+        if has_any_update or is_manual:
             self.update_card.setVisible(True)
         else:
-            if is_manual:
-                if error_msg:
-                    msg = self.i18n.t('update_check_error')
-                else:
-                    msg = self.i18n.t('update_no_updates', current=current_version)
-                self.lbl_update_status.setText(msg)
-                self.btn_download_update.setVisible(False)
-                self.update_card.setVisible(True)
-            else:
-                self.update_card.setVisible(False)
+            self.update_card.setVisible(False)
 
     def on_download_update_clicked(self):
         QDesktopServices.openUrl(QUrl(self.latest_release_url))
@@ -1719,13 +1784,18 @@ class MainWindow(QWidget):
 
     def check_winfsp_status(self):
         installed = self.mounter.is_winfsp_installed()
+        winfsp_ver = self.mounter.get_winfsp_version()
         if installed:
-            self.lbl_winfsp_warning.setText(self.i18n.t('winfsp_ok'))
-            self.lbl_winfsp_warning.setStyleSheet("color: #50fa7b; font-size: 11px;")
+            if winfsp_ver not in ("Not installed", "Unknown", "Detected (Unknown version)"):
+                text = f"WinFsp: {winfsp_ver}"
+            else:
+                text = self.i18n.t('winfsp_ok')
+            self.lbl_winfsp_warning.setText(text)
+            self.lbl_winfsp_warning.setStyleSheet("color: #50fa7b; font-size: 11px; font-weight: bold;")
             self.winfsp_card.setVisible(False)
         else:
             self.lbl_winfsp_warning.setText(self.i18n.t('winfsp_not_installed'))
-            self.lbl_winfsp_warning.setStyleSheet("color: #ff5555; font-size: 11px;")
+            self.lbl_winfsp_warning.setStyleSheet("color: #ff5555; font-size: 11px; font-weight: bold;")
             self.winfsp_card.setVisible(True)
 
     def populate_drive_letters(self):
