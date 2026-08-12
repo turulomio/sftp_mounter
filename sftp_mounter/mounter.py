@@ -21,6 +21,7 @@ import subprocess
 import shutil
 import logging
 import time
+import hashlib
 
 logger = logging.getLogger("SFTPMounter.Mounter")
 
@@ -776,3 +777,52 @@ class Mounter:
         except Exception as e:
             logger.error(f"Failed to add to known_hosts: {e}")
         return False
+
+    @staticmethod
+    def calculate_file_sha256(file_path: str) -> str:
+        """
+        Calculates the SHA-256 hash of a file in 64KB chunks.
+        
+        Returns:
+            str: Hex digest string of SHA-256 hash, or empty string if file does not exist.
+        """
+        if not file_path or not os.path.exists(file_path):
+            return ""
+        try:
+            hasher = hashlib.sha256()
+            with open(file_path, 'rb') as f:
+                while chunk := f.read(65536):
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        except Exception as e:
+            logger.error(f"Error calculating SHA-256 for {file_path}: {e}")
+            return ""
+
+    def get_binary_integrity_info(self) -> dict:
+        """
+        Calculates local SHA-256 hashes of embedded Rclone and WinFsp binaries.
+        
+        Returns:
+            dict: Component integrity details (path, hash).
+        """
+        info = {}
+        
+        # 1. Rclone binary
+        rclone_path = self.rclone_exe if os.path.exists(self.rclone_exe) else self.get_bundled_path('rclone.exe')
+        rclone_hash = self.calculate_file_sha256(rclone_path)
+        
+        info['rclone'] = {
+            'path': rclone_path,
+            'hash': rclone_hash or 'N/A'
+        }
+
+        # 2. WinFsp installer
+        msi_path = self.winfsp_msi if os.path.exists(self.winfsp_msi) else self.get_bundled_path('winfsp.msi')
+        msi_hash = self.calculate_file_sha256(msi_path)
+
+        info['winfsp_msi'] = {
+            'path': msi_path,
+            'hash': msi_hash or 'N/A'
+        }
+
+        return info

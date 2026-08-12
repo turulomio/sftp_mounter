@@ -18,23 +18,11 @@ poethepoet = "^0.24.0"
 sftp-mounter = "sftp_mounter.main:main"
 
 [tool.poe.tasks]
-setup-wine-python = [
-    { cmd = "wget -q https://aka.ms/vs/17/release/vc_redist.x64.exe -O vc_redist.x64.exe" },
-    { cmd = "wine vc_redist.x64.exe /quiet /norestart" },
-    { cmd = "rm vc_redist.x64.exe" },
-    { cmd = "wget -q https://www.python.org/ftp/python/3.10.8/python-3.10.8-amd64.exe -O python-windows.exe" },
-    { cmd = "wine python-windows.exe /quiet InstallAllUsers=1 PrependPath=1" },
-    { cmd = "rm python-windows.exe" },
-    { cmd = "wine python -m pip install --upgrade pip setuptools wheel" },
-    { cmd = "wine python -m pip install PySide6" },
-    { cmd = "wine python -m pip install ." },
-    { cmd = 'wine cmd /c copy /y "C:\Program Files\Python310\lib\site-packages\PySide6\*.dll" "C:\Program Files\Python310"' },
-    { cmd = 'wine cmd /c xcopy /e /i /y "C:\Program Files\Python310\lib\site-packages\PySide6\plugins" "C:\Program Files\Python310\plugins"' }
-]
-build-windows-wine = { cmd = "wine python sftp_mounter/package.py" }
-run-wine = { cmd = "wine python sftp_mounter/main.py" }
-test = { cmd = "python -m unittest discover tests" }
-release = { script = "sftp_mounter.release_info:print_release_steps" }
+setup-wine-python = { script = "sftp_mounter.poethepoet:setup_wine_python" }
+build-windows-wine = { script = "sftp_mounter.poethepoet:build_windows_wine" }
+run-wine = { script = "sftp_mounter.poethepoet:run_wine" }
+test = { script = "sftp_mounter.poethepoet:test" }
+release = { script = "sftp_mounter.poethepoet:release" }
 
 
 [build-system]
