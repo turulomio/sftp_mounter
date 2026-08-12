@@ -22,7 +22,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y wine64 wine32 wget xvfb libgl1 libglx-mesa0 mesa-vulkan-drivers
+          sudo apt-get install -y wine64 wine32 wget xvfb libgl1 libgl1-mesa-dri libglx-mesa0 mesa-vulkan-drivers fontconfig fonts-freefont-ttf libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
 
       - name: Initialize Wine Environment
         env:
@@ -41,6 +41,8 @@ jobs:
           QT_OPENGL: software
           QT_QUICK_BACKEND: software
           QT_QPA_PLATFORM: offscreen
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          GALLIUM_DRIVER: llvmpipe
         run: |
           xvfb-run -a poe setup-wine-python
 
@@ -50,6 +52,8 @@ jobs:
           QT_OPENGL: software
           QT_QUICK_BACKEND: software
           QT_QPA_PLATFORM: offscreen
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          GALLIUM_DRIVER: llvmpipe
         run: |
           xvfb-run -a poe test
 
@@ -59,6 +63,8 @@ jobs:
           QT_OPENGL: software
           QT_QUICK_BACKEND: software
           QT_QPA_PLATFORM: offscreen
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          GALLIUM_DRIVER: llvmpipe
         run: |
           xvfb-run -a poe build-windows-wine
 

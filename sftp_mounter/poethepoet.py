@@ -66,6 +66,7 @@ def setup_wine_python():
         "wine python -m pip install --upgrade pip setuptools wheel",
         "wine python -m pip install PySide6",
         "wine python -m pip install .",
+        'wine reg add "HKCU\\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\Program Files\\Python310;C:\\Program Files\\Python310\\Scripts;C:\\Program Files\\Python310\\lib\\site-packages\\PySide6;%PATH%" /f',
         'wine cmd /c copy /y "C:\\Program Files\\Python310\\lib\\site-packages\\PySide6\\*.dll" "C:\\Program Files\\Python310"',
         'wine cmd /c xcopy /e /i /y "C:\\Program Files\\Python310\\lib\\site-packages\\PySide6\\plugins" "C:\\Program Files\\Python310\\plugins"'
     ]
