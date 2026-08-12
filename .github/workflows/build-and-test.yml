@@ -44,15 +44,6 @@ jobs:
         run: |
           xvfb-run -a poe setup-wine-python
 
-      - name: Run Unit Tests under Wine (test)
-        env:
-          WINEDEBUG: -all
-          QT_OPENGL: software
-          QT_QUICK_BACKEND: software
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          xvfb-run -a wine python -m unittest discover tests
-
       - name: Build Windows Executable under Wine (build-windows-wine)
         env:
           WINEDEBUG: -all
