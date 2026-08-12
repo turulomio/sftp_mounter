@@ -2444,9 +2444,8 @@ class MainWindow(QWidget):
     def on_about_clicked(self):
         """
         Muestra un cuadro de diálogo informativo (Acerca de) con las versiones del software,
-        autor, licencia, enlace al proyecto e información de integridad SHA-256 de los binarios.
+        autor, licencia y enlace al proyecto en GitHub.
         """
-        # Obtener versiones e información de integridad dinámicamente
         app_version = self.app.applicationVersion()
         rclone_ver = self.mounter.get_rclone_version()
         winfsp_ver = self.mounter.get_winfsp_version()
@@ -2454,24 +2453,11 @@ class MainWindow(QWidget):
         github_url = "https://github.com/turulomio/sftp_mounter"
         github_link = f"<a href='{github_url}' style='color: #7c7aeb;'>{github_url}</a>"
 
-        integrity = self.mounter.get_binary_integrity_info()
-        rclone_hash = integrity['rclone']['hash']
-        rclone_status = f"<span style='color: #50fa7b;'>{self.i18n.t('binary_verified')}</span>" if integrity['rclone']['is_valid'] else f"<span style='color: #ff5555;'>{self.i18n.t('binary_hash_error')}</span>"
-
-        winfsp_msi_hash = integrity['winfsp_msi']['hash']
-        winfsp_msi_status = f"<span style='color: #50fa7b;'>{self.i18n.t('binary_verified')}</span>" if integrity['winfsp_msi']['is_valid'] else f"<span style='color: #ff5555;'>{self.i18n.t('binary_hash_error')}</span>"
-
-        # Construir mensaje de versiones e integridad
         msg = (
             f"<b>{self.i18n.t('title')}</b><br><br>"
             f"• {self.i18n.t('app_version', version=app_version)}<br>"
             f"• {self.i18n.t('rclone_version', version=rclone_ver)}<br>"
             f"• {self.i18n.t('winfsp_version', version=winfsp_ver)}<br><br>"
-            f"<b>{self.i18n.t('binary_integrity_title')}:</b><br>"
-            f"• <b>rclone.exe:</b> {rclone_status}<br>"
-            f"  <code style='font-family: monospace; font-size: 11px; color: #f1fa8c;'>{rclone_hash}</code><br>"
-            f"• <b>winfsp.msi:</b> {winfsp_msi_status}<br>"
-            f"  <code style='font-family: monospace; font-size: 11px; color: #f1fa8c;'>{winfsp_msi_hash}</code><br><br>"
             f"• {self.i18n.t('author')}<br>"
             f"• {self.i18n.t('license')}<br>"
             f"• {self.i18n.t('project_url', url=github_link)}<br><br>"
