@@ -91,33 +91,51 @@ def _get_wine_env():
 
 def build_windows_wine():
     """
-    Executes the PyInstaller packaging script under Wine.
+    Executes the PyInstaller packaging script. Uses wine on Linux, native python on Windows.
     """
-    cmd = "wine python sftp_mounter/package.py"
-    print(f"--> Executing: {cmd}")
-    res = subprocess.run(cmd, shell=True, env=_get_wine_env())
+    if sys.platform == "win32":
+        cmd = f'"{sys.executable}" sftp_mounter/package.py'
+        print(f"--> Executing (Native Windows): {cmd}")
+        res = subprocess.run(cmd, shell=True)
+    else:
+        cmd = "wine python sftp_mounter/package.py"
+        print(f"--> Executing (Wine): {cmd}")
+        res = subprocess.run(cmd, shell=True, env=_get_wine_env())
+    
     if res.returncode != 0:
         sys.exit(res.returncode)
 
 
 def run_wine():
     """
-    Runs SFTP Mounter main script under Wine.
+    Runs SFTP Mounter main script. Uses wine on Linux, native python on Windows.
     """
-    cmd = "wine python sftp_mounter/main.py"
-    print(f"--> Executing: {cmd}")
-    res = subprocess.run(cmd, shell=True, env=_get_wine_env())
+    if sys.platform == "win32":
+        cmd = f'"{sys.executable}" sftp_mounter/main.py'
+        print(f"--> Executing (Native Windows): {cmd}")
+        res = subprocess.run(cmd, shell=True)
+    else:
+        cmd = "wine python sftp_mounter/main.py"
+        print(f"--> Executing (Wine): {cmd}")
+        res = subprocess.run(cmd, shell=True, env=_get_wine_env())
+        
     if res.returncode != 0:
         sys.exit(res.returncode)
 
 
 def test():
     """
-    Runs the unit test suite under Wine environment.
+    Runs the unit test suite. Uses wine on Linux, native python on Windows.
     """
-    cmd = "wine python -m unittest discover tests"
-    print(f"--> Executing: {cmd}")
-    res = subprocess.run(cmd, shell=True, env=_get_wine_env())
+    if sys.platform == "win32":
+        cmd = f'"{sys.executable}" -m unittest discover tests'
+        print(f"--> Executing (Native Windows): {cmd}")
+        res = subprocess.run(cmd, shell=True)
+    else:
+        cmd = "wine python -m unittest discover tests"
+        print(f"--> Executing (Wine): {cmd}")
+        res = subprocess.run(cmd, shell=True, env=_get_wine_env())
+        
     if res.returncode != 0:
         sys.exit(res.returncode)
 

@@ -7,68 +7,28 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Host Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install Wine & System Dependencies
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt-get update
-          sudo apt-get install -y wine64 wine32 wget xvfb libgl1 libgl1-mesa-dri libglx-mesa0 mesa-vulkan-drivers fontconfig fonts-freefont-ttf libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
-
-      - name: Initialize Wine Environment
-        env:
-          WINEDEBUG: -all
-        run: |
-          xvfb-run -a wineboot -u
-
-      - name: Install PoeThePoet & Poetry
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install poethepoet poetry
+          poetry install
 
-      - name: Setup Wine Python (setup-wine-python)
-        env:
-          WINEDEBUG: -all
-          QT_OPENGL: software
-          QT_QUICK_BACKEND: software
-          QT_QPA_PLATFORM: offscreen
-          LIBGL_ALWAYS_SOFTWARE: '1'
-          GALLIUM_DRIVER: llvmpipe
-        run: |
-          xvfb-run -a poe setup-wine-python
+      - name: Run Unit Tests
+        run: poe test
 
-      - name: Run Unit Tests under Wine (test)
-        env:
-          WINEDEBUG: -all
-          QT_OPENGL: software
-          QT_QUICK_BACKEND: software
-          QT_QPA_PLATFORM: offscreen
-          LIBGL_ALWAYS_SOFTWARE: '1'
-          GALLIUM_DRIVER: llvmpipe
-          WINEPATH: 'C:\Program Files\Python310;C:\Program Files\Python310\Scripts;C:\Program Files\Python310\lib\site-packages\PySide6;C:\Program Files\Python310\lib\site-packages\shiboken6'
-        run: |
-          xvfb-run -a wine python -m unittest discover tests
-
-      - name: Build Windows Executable under Wine (build-windows-wine)
-        env:
-          WINEDEBUG: -all
-          QT_OPENGL: software
-          QT_QUICK_BACKEND: software
-          QT_QPA_PLATFORM: offscreen
-          LIBGL_ALWAYS_SOFTWARE: '1'
-          GALLIUM_DRIVER: llvmpipe
-          WINEPATH: 'C:\Program Files\Python310;C:\Program Files\Python310\Scripts;C:\Program Files\Python310\lib\site-packages\PySide6;C:\Program Files\Python310\lib\site-packages\shiboken6'
-        run: |
-          xvfb-run -a poe build-windows-wine
+      - name: Build Windows Executable
+        run: poe build-windows-wine
 
       - name: Upload Windows Executable Artifact
         uses: actions/upload-artifact@v4
