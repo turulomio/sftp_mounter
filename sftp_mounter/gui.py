@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QPushButton, QComboBox, QFileDialog, QSystemTrayIcon,
     QMenu, QMessageBox, QFrame, QStyle, QCheckBox, QMenuBar,
     QDialog, QListWidget, QListWidgetItem, QScrollArea, QSplitter, QInputDialog,
-    QPlainTextEdit
+    QPlainTextEdit, QTextEdit
 )
 
 from sftp_mounter.config_manager import ConfigManager
@@ -527,6 +527,208 @@ class KnownHostsViewerDialog(QDialog):
             self.txt_content.setPlainText(content if content.strip() else self.i18n.t('known_hosts_not_found'))
         except Exception as e:
             self.txt_content.setPlainText(f"Error reading known_hosts: {e}")
+
+
+class BinaryIntegrityWorker(QThread):
+    finished_verify = Signal(dict, str)  # (results_dict, error_msg)
+
+    def __init__(self, mounter):
+        super().__init__()
+        self.mounter = mounter
+
+    def _fetch_rclone_remote_hash(self, rclone_ver, local_hash=""):
+        import urllib.request
+        import zipfile
+        import io
+        import hashlib
+        import json
+
+        # 1. Fetch rclone-current-windows-amd64.zip directly from official downloads and hash rclone.exe
+        try:
+            url = "https://downloads.rclone.org/rclone-current-windows-amd64.zip"
+            req = urllib.request.Request(url, headers={'User-Agent': 'SFTPMounter'})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    z_data = response.read()
+                    zf = zipfile.ZipFile(io.BytesIO(z_data))
+                    for name in zf.namelist():
+                        if name.endswith('rclone.exe'):
+                            exe_bytes = zf.read(name)
+                            h = hashlib.sha256(exe_bytes).hexdigest().lower()
+                            if h:
+                                return h
+        except Exception as e:
+            logger.warning(f"Failed to fetch rclone-current zip from rclone.org: {e}")
+
+        # 2. Fallback: check latest GitHub release assets
+        clean_v = str(rclone_ver).strip().lstrip('v')
+        tags_to_try = [f"v{clean_v}"] if clean_v and clean_v not in ("Unknown", "Not detected") else []
+        tags_to_try.append("latest")
+        
+        for tag in tags_to_try:
+            try:
+                if tag == "latest":
+                    url = "https://api.github.com/repos/rclone/rclone/releases/latest"
+                else:
+                    url = f"https://api.github.com/repos/rclone/rclone/releases/tags/{tag}"
+                    
+                req = urllib.request.Request(url, headers={'User-Agent': 'SFTPMounter'})
+                with urllib.request.urlopen(req, timeout=6) as response:
+                    if response.status == 200:
+                        data = json.loads(response.read().decode('utf-8'))
+                        for asset in data.get('assets', []):
+                            if 'windows-amd64.zip' in asset.get('name', ''):
+                                download_url = asset.get('browser_download_url')
+                                req_zip = urllib.request.Request(download_url, headers={'User-Agent': 'SFTPMounter'})
+                                with urllib.request.urlopen(req_zip, timeout=10) as z_resp:
+                                    z_data = z_resp.read()
+                                    zf = zipfile.ZipFile(io.BytesIO(z_data))
+                                    for name in zf.namelist():
+                                        if name.endswith('rclone.exe'):
+                                            exe_bytes = zf.read(name)
+                                            return hashlib.sha256(exe_bytes).hexdigest().lower()
+            except Exception as e:
+                logger.warning(f"Failed to fetch rclone {tag} release zip: {e}")
+        return ""
+
+    def _fetch_winfsp_remote_hash(self, local_hash):
+        import urllib.request
+        import json
+        import re
+
+        try:
+            url = "https://api.github.com/repos/winfsp/winfsp/releases"
+            req = urllib.request.Request(url, headers={'User-Agent': 'SFTPMounter'})
+            with urllib.request.urlopen(req, timeout=8) as response:
+                if response.status == 200:
+                    releases = json.loads(response.read().decode('utf-8'))
+                    for rel in releases:
+                        body = rel.get('body', '')
+                        hashes = re.findall(r'[a-fA-F0-9]{64}', body)
+                        for h in hashes:
+                            if h.lower() == local_hash.lower():
+                                return h.lower()
+                    if releases:
+                        hashes = re.findall(r'[a-fA-F0-9]{64}', releases[0].get('body', ''))
+                        if hashes:
+                            return hashes[0].lower()
+        except Exception as e:
+            logger.warning(f"Failed to fetch WinFsp release body: {e}")
+        return ""
+
+    def run(self):
+        rclone_path = self.mounter.rclone_exe if os.path.exists(self.mounter.rclone_exe) else self.mounter.get_bundled_path('rclone.exe')
+        rclone_local_hash = self.mounter.calculate_file_sha256(rclone_path).lower()
+        rclone_ver = self.mounter.get_rclone_version()
+        rclone_remote_hash = self._fetch_rclone_remote_hash(rclone_ver, rclone_local_hash)
+
+        msi_path = self.mounter.winfsp_msi if os.path.exists(self.mounter.winfsp_msi) else self.mounter.get_bundled_path('winfsp.msi')
+        winfsp_local_hash = self.mounter.calculate_file_sha256(msi_path).lower()
+        winfsp_remote_hash = self._fetch_winfsp_remote_hash(winfsp_local_hash)
+
+        rclone_matches = (rclone_local_hash == rclone_remote_hash) if (rclone_local_hash and rclone_remote_hash) else None
+        winfsp_matches = (winfsp_local_hash == winfsp_remote_hash) if (winfsp_local_hash and winfsp_remote_hash) else None
+
+        results = {
+            'rclone': {
+                'file': 'rclone.exe',
+                'local_hash': rclone_local_hash or 'N/A',
+                'remote_hash': rclone_remote_hash or 'N/A',
+                'matches': rclone_matches
+            },
+            'winfsp': {
+                'file': 'winfsp.msi',
+                'local_hash': winfsp_local_hash or 'N/A',
+                'remote_hash': winfsp_remote_hash or 'N/A',
+                'matches': winfsp_matches
+            }
+        }
+        self.finished_verify.emit(results, "")
+
+
+class BinaryIntegrityDialog(QDialog):
+    """
+    Diálogo para verificar la integridad online de los binarios rclone.exe y winfsp.msi.
+    """
+    def __init__(self, parent=None, mounter=None, i18n=None):
+        super().__init__(parent)
+        self.mounter = mounter
+        self.i18n = i18n
+        self.worker = None
+
+        self.setWindowTitle(self.i18n.t('integrity_dialog_title'))
+        self.setMinimumSize(720, 450)
+        self.setStyleSheet(QSS_STYLE)
+
+        self.init_ui()
+        self.start_verification()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        self.lbl_status = QLabel(self.i18n.t('integrity_checking'), self)
+        self.lbl_status.setStyleSheet("color: #f1fa8c; font-size: 13px; font-weight: bold;")
+        layout.addWidget(self.lbl_status)
+
+        self.txt_result = QTextEdit(self)
+        self.txt_result.setReadOnly(True)
+        self.txt_result.setStyleSheet("""
+            QTextEdit {
+                background-color: #141419;
+                color: #e0e0ed;
+                font-family: 'Consolas', 'Courier New', monospace;
+                font-size: 12px;
+                border: 1px solid #333344;
+                border-radius: 6px;
+                padding: 12px;
+            }
+        """)
+        layout.addWidget(self.txt_result, 1)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        self.btn_close = QPushButton(self.i18n.t('btn_close'), self)
+        self.btn_close.setObjectName("btnSecondary")
+        self.btn_close.clicked.connect(self.accept)
+        btn_layout.addWidget(self.btn_close)
+        layout.addLayout(btn_layout)
+
+    def start_verification(self):
+        self.txt_result.setHtml(f"<span style='color: #f1fa8c;'>{self.i18n.t('integrity_checking')}</span>")
+        self.worker = BinaryIntegrityWorker(self.mounter)
+        self.worker.finished_verify.connect(self.on_verification_finished)
+        self.worker.start()
+
+    def on_verification_finished(self, results, error_msg):
+        blocks = []
+
+        for comp_key, name in [('rclone', 'rclone.exe'), ('winfsp', 'winfsp.msi')]:
+            item = results.get(comp_key, {})
+            local_h = item.get('local_hash', 'N/A')
+            remote_h = item.get('remote_hash', 'N/A')
+            matches = item.get('matches')
+
+            if matches is True:
+                result_html = f"<span style='color: #50fa7b; font-weight: bold;'>{self.i18n.t('integrity_match')}</span>"
+            elif matches is False:
+                result_html = f"<span style='color: #ff5555; font-weight: bold;'>{self.i18n.t('integrity_mismatch')}</span>"
+            else:
+                result_html = f"<span style='color: #ffb86c; font-weight: bold;'>{self.i18n.t('integrity_remote_unavailable')}</span>"
+
+            block = (
+                f"<div style='margin-bottom: 15px; border-bottom: 1px solid #222233; padding-bottom: 10px;'>"
+                f"<b style='color: #8be9fd; font-size: 13px;'>📦 BINARIO: {name}</b><br><br>"
+                f"&nbsp;&nbsp;<b>Hash Local  (SHA-256):</b> <code style='color: #f1fa8c;'>{local_h}</code><br>"
+                f"&nbsp;&nbsp;<b>Hash Remoto (GitHub) :</b> <code style='color: #f1fa8c;'>{remote_h}</code><br><br>"
+                f"&nbsp;&nbsp;<b>Resultado :</b> {result_html}"
+                f"</div>"
+            )
+            blocks.append(block)
+
+        self.txt_result.setHtml("".join(blocks))
+        self.lbl_status.setText(self.i18n.t('integrity_dialog_title'))
 
 
 class ProfileManagerDialog(QDialog):
@@ -1258,6 +1460,11 @@ class MainWindow(QWidget):
         self.act_about.triggered.connect(self.on_about_clicked)
         self.menu_help.addAction(self.act_about)
 
+        # Verificar integridad online
+        self.act_verify_integrity = QAction(self)
+        self.act_verify_integrity.triggered.connect(self.on_verify_integrity_clicked)
+        self.menu_help.addAction(self.act_verify_integrity)
+
         # Header Title Layout
         title_layout = QHBoxLayout()
         self.lbl_title = QLabel("SFTP Mounter")
@@ -1772,8 +1979,16 @@ class MainWindow(QWidget):
         self.act_exit.setText(self.i18n.t('menu_exit'))
         self.menu_help.setTitle(self.i18n.t('menu_help'))
         self.act_about.setText(self.i18n.t('about'))
+        self.act_verify_integrity.setText(self.i18n.t('menu_verify_integrity'))
         if hasattr(self, 'btn_download_update'):
             self.btn_download_update.setText(self.i18n.t('btn_download_update'))
+
+    def on_verify_integrity_clicked(self):
+        """
+        Abre el diálogo de comprobación de integridad online de los binarios embebidos.
+        """
+        dialog = BinaryIntegrityDialog(parent=self, mounter=self.mounter, i18n=self.i18n)
+        dialog.exec_()
 
         self.check_winfsp_status()
         if hasattr(self, 'profile_cards'):
@@ -2231,15 +2446,13 @@ class MainWindow(QWidget):
         Muestra un cuadro de diálogo informativo (Acerca de) con las versiones del software,
         autor, licencia y enlace al proyecto en GitHub.
         """
-        # Obtener versiones dinámicamente
         app_version = self.app.applicationVersion()
         rclone_ver = self.mounter.get_rclone_version()
         winfsp_ver = self.mounter.get_winfsp_version()
         
         github_url = "https://github.com/turulomio/sftp_mounter"
         github_link = f"<a href='{github_url}' style='color: #7c7aeb;'>{github_url}</a>"
-        
-        # Construir mensaje de versiones
+
         msg = (
             f"<b>{self.i18n.t('title')}</b><br><br>"
             f"• {self.i18n.t('app_version', version=app_version)}<br>"
@@ -2258,6 +2471,9 @@ class MainWindow(QWidget):
         """
         Determina si el inicio automático está habilitado consultando el registro de Windows.
         """
+        if sys.platform != "win32":
+            return False
+
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
         try:
             import winreg
@@ -2277,6 +2493,9 @@ class MainWindow(QWidget):
         """
         Agrega o remueve la clave del registro de Windows para controlar el inicio automático.
         """
+        if sys.platform != "win32":
+            return False
+
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
         try:
             import winreg
