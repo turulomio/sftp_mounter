@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sftp-mounter"
-version = "1.2.0"
+version = "1.3.0"
 description = "A simple Qt6 GUI tool to mount SFTP servers as network drives on Windows 11 using Rclone and WinFsp."
 authors = ["turulomio <turulomio@yahoo.es>"]
 readme = "README.md"

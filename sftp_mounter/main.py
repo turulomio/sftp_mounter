@@ -94,9 +94,10 @@ def main():
     # so that the user interface does not look blurry or excessively small.
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     
+    from sftp_mounter import __version__
     app = QApplication(sys.argv)
     app.setApplicationName("SFTP Drive Mounter")
-    app.setApplicationVersion("1.2.0")
+    app.setApplicationVersion(__version__)
     app.setOrganizationName("SFTP_Mounter")
     app.setOrganizationDomain("SFTP_Mounter")
 
