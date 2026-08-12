@@ -42,5 +42,27 @@ class TestMounter(unittest.TestCase):
         mounter = Mounter()
         self.assertFalse(mounter.is_actually_mounted("X:"))
 
+    @patch('sftp_mounter.mounter.Mounter.extract_binaries')
+    def test_obscure_password_fallback(self, mock_extract):
+        mounter = Mounter()
+        mounter.rclone_exe = "/non/existent/rclone.exe"
+        raw_pass = "my_secret_pass"
+        res = mounter.obscure_password(raw_pass)
+        self.assertEqual(res, raw_pass)
+
+    def test_calculate_file_sha256(self):
+        test_file = os.path.join(self.test_dir, 'sha_test.txt')
+        with open(test_file, 'w', encoding='utf-8') as f:
+            f.write("Hello World")
+        sha = Mounter.calculate_file_sha256(test_file)
+        self.assertEqual(len(sha), 64)
+
+    @patch('sftp_mounter.mounter.Mounter.extract_binaries')
+    def test_versions(self, mock_extract):
+        mounter = Mounter()
+        mounter.rclone_exe = "/non/existent/rclone.exe"
+        r_ver = mounter.get_rclone_version()
+        self.assertIn("Not detected", r_ver)
+
 if __name__ == '__main__':
     unittest.main()
