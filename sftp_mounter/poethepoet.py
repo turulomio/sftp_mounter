@@ -102,7 +102,7 @@ def run_wine():
 
 def test():
     """
-    Runs the unit test suite under Wine Windows environment.
+    Runs the unit test suite under Wine environment.
     """
     cmd = "wine python -m unittest discover tests"
     print(f"--> Executing: {cmd}")
