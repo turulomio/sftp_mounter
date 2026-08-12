@@ -65,7 +65,7 @@ def setup_wine_python():
         "wine python-windows.exe /quiet InstallAllUsers=1 PrependPath=1",
         "rm -f python-windows.exe",
         "wine python -m pip install --upgrade pip setuptools wheel",
-        "wine python -m pip install PySide6",
+        "wine python -m pip install PySide6 coverage",
         "wine python -m pip install .",
         'wine reg add "HKCU\\Environment" /v PATH /t REG_EXPAND_SZ /d "C:\\Program Files\\Python310;C:\\Program Files\\Python310\\Scripts;C:\\Program Files\\Python310\\lib\\site-packages\\PySide6;%PATH%" /f',
         'wine cmd /c copy /y "C:\\Program Files\\Python310\\lib\\site-packages\\PySide6\\*.dll" "C:\\Program Files\\Python310"',
@@ -125,16 +125,24 @@ def run_wine():
 
 def test():
     """
-    Runs the unit test suite. Uses wine on Linux, native python on Windows.
+    Runs the unit test suite with coverage report. Uses wine on Linux, native python on Windows.
     """
     if sys.platform == "win32":
-        cmd = f'"{sys.executable}" -m unittest discover tests'
-        print(f"--> Executing (Native Windows): {cmd}")
-        res = subprocess.run(cmd, shell=True)
+        cmd_run = f'"{sys.executable}" -m coverage run --source=sftp_mounter --omit="*/poethepoet.py" -m unittest discover tests'
+        cmd_report = f'"{sys.executable}" -m coverage report --omit="*/poethepoet.py" -m'
+        print(f"--> Executing (Native Windows): {cmd_run}")
+        res = subprocess.run(cmd_run, shell=True)
+        if res.returncode == 0:
+            print(f"--> Executing (Native Windows): {cmd_report}")
+            subprocess.run(cmd_report, shell=True)
     else:
-        cmd = "wine python -m unittest discover tests"
-        print(f"--> Executing (Wine): {cmd}")
-        res = subprocess.run(cmd, shell=True, env=_get_wine_env())
+        cmd_run = 'wine python -m coverage run --source=sftp_mounter --omit="*/poethepoet.py" -m unittest discover tests'
+        cmd_report = 'wine python -m coverage report --omit="*/poethepoet.py" -m'
+        print(f"--> Executing (Wine): {cmd_run}")
+        res = subprocess.run(cmd_run, shell=True, env=_get_wine_env())
+        if res.returncode == 0:
+            print(f"--> Executing (Wine): {cmd_report}")
+            subprocess.run(cmd_report, shell=True, env=_get_wine_env())
         
     if res.returncode != 0:
         sys.exit(res.returncode)
