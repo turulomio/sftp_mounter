@@ -22,6 +22,12 @@ import json
 import re
 import hashlib
 
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 
 def calculate_sha256(file_path: str) -> str:
     """
@@ -175,7 +181,7 @@ def setup_binaries():
             os.remove(winfsp_temp)
             raise RuntimeError(f"WinFsp SHA-256 referential integrity check failed!\nExpected: {winfsp_expected_hashes}\nGot: {winfsp_sha256}")
         
-        print("[✓] WinFsp MSI referential integrity verified successfully!")
+        print("[OK] WinFsp MSI referential integrity verified successfully!")
         if os.path.exists(winfsp_path):
             os.remove(winfsp_path)
         shutil.move(winfsp_temp, winfsp_path)
@@ -196,7 +202,7 @@ def setup_binaries():
             os.remove(zip_path)
             raise RuntimeError(f"Rclone ZIP referential integrity check failed!\nExpected: {rclone_expected_sha}\nGot: {rclone_zip_sha256}")
             
-        print("[✓] Rclone ZIP referential integrity verified successfully!")
+        print("[OK] Rclone ZIP referential integrity verified successfully!")
         
         try:
             print("Extracting rclone.exe...")
