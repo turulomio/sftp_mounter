@@ -1,3 +1,10 @@
+"""
+Unit tests for the Binary Integrity verification dialog and hash checking workflows.
+
+Verifies SHA-256 calculation on bundled executables and MSI installers, translation keys,
+and UI menu action bindings in MainWindow.
+"""
+
 import os
 import sys
 import unittest
@@ -27,8 +34,12 @@ app = QApplication.instance() or QApplication(sys.argv)
 
 
 class TestBinaryIntegrity(unittest.TestCase):
+    """
+    Test suite for binary integrity calculation, verification, and UI integration.
+    """
+
     def test_calculate_file_sha256(self):
-        """Test hash calculation on known content."""
+        """Tests hash calculation on known content and non-existent files."""
         mounter = Mounter()
         # Non-existent file should return empty string
         self.assertEqual(mounter.calculate_file_sha256("/non/existent/file.txt"), "")
@@ -47,7 +58,7 @@ class TestBinaryIntegrity(unittest.TestCase):
                 os.remove(temp_file)
 
     def test_get_binary_integrity_info(self):
-        """Test get_binary_integrity_info structure and local hash calculation."""
+        """Tests get_binary_integrity_info dictionary structure and local hash fields."""
         mounter = Mounter()
         info = mounter.get_binary_integrity_info()
         self.assertIn('rclone', info)
@@ -58,7 +69,7 @@ class TestBinaryIntegrity(unittest.TestCase):
             self.assertIn('hash', info[comp])
 
     def test_i18n_integrity_keys(self):
-        """Test that all binary integrity translation keys exist across supported languages."""
+        """Tests that all binary integrity translation keys exist across supported languages."""
         keys = [
             'menu_verify_integrity', 'integrity_dialog_title', 'integrity_checking',
             'integrity_match', 'integrity_mismatch', 'integrity_remote_unavailable'
@@ -70,7 +81,7 @@ class TestBinaryIntegrity(unittest.TestCase):
                 self.assertTrue(res, f"Missing key {k} for language {lang_code}")
 
     def test_main_window_menu_action(self):
-        """Test that MainWindow has act_verify_integrity action configured in help menu."""
+        """Tests that MainWindow has act_verify_integrity action configured in the help menu."""
         window = MainWindow(app)
         self.assertTrue(hasattr(window, 'act_verify_integrity'))
         self.assertEqual(window.act_verify_integrity.text(), window.i18n.t('menu_verify_integrity'))
