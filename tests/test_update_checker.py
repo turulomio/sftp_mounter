@@ -1,3 +1,10 @@
+"""
+Unit tests for the update checker background workers, version parsing, and update cards.
+
+Verifies semantic version comparison, translation keys for update statuses, and UI card
+rendering logic for manual and automatic update check completions.
+"""
+
 import os
 import sys
 import unittest
@@ -27,8 +34,12 @@ app = QApplication.instance() or QApplication(sys.argv)
 
 
 class TestUpdateChecker(unittest.TestCase):
+    """
+    Test suite for update checking worker threads, version parsing, and UI notification cards.
+    """
+
     def test_version_parsing(self):
-        """Test parse_version tuple comparisons."""
+        """Tests semantic version parsing and numeric tuple comparison."""
         self.assertEqual(parse_version("1.2.0"), (1, 2, 0))
         self.assertEqual(parse_version("v1.3.5"), (1, 3, 5))
         self.assertTrue(parse_version("1.3.0") > parse_version("1.2.0"))
@@ -36,7 +47,7 @@ class TestUpdateChecker(unittest.TestCase):
         self.assertFalse(parse_version("1.1.9") > parse_version("1.2.0"))
 
     def test_i18n_update_keys(self):
-        """Test that all update check translation keys exist in all languages."""
+        """Tests that all update check translation keys exist across supported languages."""
         keys = [
             'menu_check_updates', 'update_available', 'update_no_updates',
             'update_check_error', 'update_checking', 'btn_download_update',
@@ -49,7 +60,7 @@ class TestUpdateChecker(unittest.TestCase):
                 self.assertTrue(res, f"Missing key {k} for language {lang_code}")
 
     def test_update_card_ui_flow(self):
-        """Test update card manual and automatic completion handlers for SFTP Mounter, WinFsp, and Rclone."""
+        """Tests update card manual and automatic completion handlers for SFTP Mounter, WinFsp, and Rclone."""
         window = MainWindow(app)
         self.assertTrue(hasattr(window, 'update_card'))
         self.assertTrue(hasattr(window, 'act_check_updates'))

@@ -44,6 +44,15 @@ logger = logging.getLogger("SFTPMounter.ConfigManager")
 _OFS_KEY = 0x5A  # Simple XOR mask to obfuscate plaintext
 
 def _encode_pass(val: str) -> str:
+    """
+    Obfuscates a password string using XOR transformation and Base64 encoding.
+
+    Args:
+        val (str): Plaintext password to encode.
+
+    Returns:
+        str: Obfuscated Base64-encoded string, or original value if encoding fails.
+    """
     if not val:
         return ""
     try:
@@ -55,6 +64,15 @@ def _encode_pass(val: str) -> str:
         return val
 
 def _decode_pass(val: str) -> str:
+    """
+    Deobfuscates a previously encoded Base64 password string.
+
+    Args:
+        val (str): Obfuscated Base64-encoded password string.
+
+    Returns:
+        str: Deobfuscated plaintext password, or original string as legacy fallback.
+    """
     if not val:
         return ""
     try:
