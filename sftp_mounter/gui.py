@@ -1214,6 +1214,7 @@ class ProfileManagerDialog(QDialog):
             if items:
                 self.lst_profiles.setCurrentItem(items[0])
             QMessageBox.information(self, self.i18n.t('profile_saved_title'), self.i18n.t('profile_saved_msg', profile_name=name))
+            self.accept()
         else:
             QMessageBox.critical(self, self.i18n.t('error_save_title'), self.i18n.t('error_save_failed'))
 
