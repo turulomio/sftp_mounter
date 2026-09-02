@@ -16,7 +16,7 @@ class TestPackage(unittest.TestCase):
 
     def test_get_project_version(self):
         version = get_project_version()
-        self.assertEqual(version, "1.3.0")
+        self.assertEqual(version, "1.4.0")
 
     def test_calculate_sha256(self):
         test_file = os.path.join(self.test_dir, 'sample.txt')

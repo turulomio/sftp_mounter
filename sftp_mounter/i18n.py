@@ -647,6 +647,12 @@ TRANSLATIONS = {
         'hi': 'WinFsp संस्करण: {version}', 'zh': 'WinFsp 版本: {version}', 'ru': 'Версия WinFsp: {version}',
         'ro': 'Versiune WinFsp: {version}'
     },
+    'cancel': {
+        'es': 'Cancelar', 'en': 'Cancel', 'fr': 'Annuler',
+        'pt': 'Cancelar', 'de': 'Abbrechen', 'it': 'Annulla',
+        'hi': 'रद्द करें', 'zh': '取消', 'ru': 'Отмена',
+        'ro': 'Anulare'
+    },
     'close': {
         'es': 'Cerrar', 'en': 'Close', 'fr': 'Fermer',
         'pt': 'Fechar', 'de': 'Schließen', 'it': 'Chiudi',
@@ -979,75 +985,219 @@ TRANSLATIONS = {
     },
     'filemode_help_desc': {
         'es': 'Define los permisos en formato octal con los que se mostrarán y crearán los archivos. Por ejemplo, 0640 significa: Propietario = Lectura/Escritura (6), Grupo = Lectura (4), Otros = Sin acceso (0). Si se deja en blanco, Rclone aplicará su comportamiento por defecto.',
-        'en': 'Defines the permission mask in octal format for file presentation and creation. For example, 0640 means: Owner = Read/Write (6), Group = Read (4), Others = No access (0). If left blank, Rclone will apply its default behavior.'
+        'en': 'Defines the permission mask in octal format for file presentation and creation. For example, 0640 means: Owner = Read/Write (6), Group = Read (4), Others = No access (0). If left blank, Rclone will apply its default behavior.',
+        'fr': 'Définit le masque d\'autorisation au format octal pour la présentation et la création de fichiers. Par exemple, 0640 signifie : Propriétaire = Lecture/Écriture (6), Groupe = Lecture (4), Autres = Aucun accès (0). Si laissé vide, Rclone appliquera son comportement par défaut.',
+        'pt': 'Define a máscara de permissão em formato octal para exibição e criação de arquivos. Por exemplo, 0640 significa: Proprietário = Leitura/Escrita (6), Grupo = Leitura (4), Outros = Sem acesso (0). Se deixado em branco, o Rclone aplicará o comportamento padrão.',
+        'de': 'Definiert die Berechtigungsmaske im Oktalformat für Dateidarstellung und -erstellung. Beispielsweise bedeutet 0640: Eigentümer = Lesen/Schreiben (6), Gruppe = Lesen (4), Andere = Kein Zugriff (0). Wenn leer gelassen, wendet Rclone das Standardverhalten an.',
+        'it': 'Definisce la maschera dei permessi in formato ottale per la visualizzazione e la creazione dei file. Ad esempio, 0640 significa: Proprietario = Lettura/Scrittura (6), Gruppo = Lettura (4), Altri = Nessun accesso (0). Se lasciato vuoto, Rclone applicherà il comportamento predefinito.',
+        'hi': 'फ़ाइल प्रदर्शन और निर्माण के लिए ऑक्टल प्रारूप में अनुमति मास्क को परिभाषित करता है। उदाहरण के लिए, 0640 का अर्थ है: स्वामी = पढ़ना/लिखना (6), समूह = पढ़ना (4), अन्य = कोई पहुँच नहीं (0)। यदि खाली छोड़ दिया जाता है, तो Rclone अपना डिफ़ॉल्ट व्यवहार लागू करेगा।',
+        'zh': '以八进制格式定义用于文件展示和创建的权限掩码。例如，0640 表示：所有者 = 读/写 (6)，组 = 读 (4)，其他 = 无访问权限 (0)。如果留空，Rclone 将应用其默认行为。',
+        'ru': 'Определяет маску разрешений в восьмеричном формате для отображения и создания файлов. Например, 0640 означает: Владелец = Чтение/Запись (6), Группа = Чтение (4), Другие = Нет доступа (0). Если оставить пустым, Rclone применит стандартное поведение.',
+        'ro': 'Definește masca de permisiuni în format octal pentru afișarea și crearea fișierelor. De exemplu, 0640 înseamnă: Proprietar = Citire/Scriere (6), Grup = Citire (4), Alții = Fără acces (0). Dacă este lăsat gol, Rclone va aplica comportamentul implicit.'
     },
     'dirmode_help_desc': {
         'es': 'Define los permisos en formato octal con los que se mostrarán y crearán las carpetas. Por ejemplo, 0750 significa: Propietario = Lectura/Escritura/Ejecución (7), Grupo = Lectura/Ejecución (5), Otros = Sin acceso (0). Si se deja en blanco, Rclone aplicará su comportamiento por defecto.',
-        'en': 'Defines the permission mask in octal format for directory presentation and creation. For example, 0750 means: Owner = Read/Write/Execute (7), Group = Read/Execute (5), Others = No access (0). If left blank, Rclone will apply its default behavior.'
+        'en': 'Defines the permission mask in octal format for directory presentation and creation. For example, 0750 means: Owner = Read/Write/Execute (7), Group = Read/Execute (5), Others = No access (0). If left blank, Rclone will apply its default behavior.',
+        'fr': 'Définit le masque d\'autorisation au format octal pour la présentation et la création de dossiers. Par exemple, 0750 signifie : Propriétaire = Lecture/Écriture/Exécution (7), Groupe = Lecture/Exécution (5), Autres = Aucun accès (0). Si laissé vide, Rclone appliquera son comportement par défaut.',
+        'pt': 'Define a máscara de permissão em formato octal para exibição e criação de pastas. Por exemplo, 0750 significa: Proprietário = Leitura/Escrita/Execução (7), Grupo = Leitura/Execução (5), Outros = Sem acesso (0). Se deixado em branco, o Rclone aplicará o comportamento padrão.',
+        'de': 'Definiert die Berechtigungsmaske im Oktalformat für Ordnerdarstellung und -erstellung. Beispielsweise bedeutet 0750: Eigentümer = Lesen/Schreiben/Ausführen (7), Gruppe = Lesen/Ausführen (5), Andere = Kein Zugriff (0). Wenn leer gelassen, wendet Rclone das Standardverhalten an.',
+        'it': 'Definisce la maschera dei permessi in formato ottale per la visualizzazione e la creazione delle cartelle. Ad esempio, 0750 significa: Proprietario = Lettura/Scrittura/Esecuzione (7), Gruppo = Lettura/Esecuzione (5), Altri = Nessun accesso (0). Se lasciato vuoto, Rclone applicherà il comportamento predefinito.',
+        'hi': 'निर्देशिका प्रदर्शन और निर्माण के लिए ऑक्टल प्रारूप में अनुमति मास्क को परिभाषित करता है। उदाहरण के लिए, 0750 का अर्थ है: स्वामी = पढ़ना/लिखना/निष्पादित करना (7), समूह = पढ़ना/निष्पादित करना (5), अन्य = कोई पहुँच नहीं (0)। यदि खाली छोड़ दिया जाता है, तो Rclone अपना डिफ़ॉल्ट व्यवहार लागू करेगा।',
+        'zh': '以八进制格式定义用于目录展示和创建的权限掩码。例如，0750 表示：所有者 = 读/写/执行 (7)，组 = 读/执行 (5)，其他 = 无访问权限 (0)。如果留空，Rclone 将应用其默认行为。',
+        'ru': 'Определяет маску разрешений в восьмеричном формате для отображения и создания каталогов. Например, 0750 означает: Владелец = Чтение/Запись/Выполнение (7), Группа = Чтение/Выполнение (5), Другие = Нет доступа (0). Если оставить пустым, Rclone применит стандартное поведение.',
+        'ro': 'Definește masca de permisiuni în format octal pentru afișarea și crearea directoarelor. De exemplu, 0750 înseamnă: Proprietar = Citire/Scriere/Execuție (7), Grup = Citire/Execuție (5), Alții = Fără acces (0). Dacă este lăsat gol, Rclone va aplica comportamentul implicit.'
     },
     'uid_gid_help_desc': {
         'es': 'Permite emular un User ID (UID) y Group ID (GID) de Unix específico de cara al sistema de archivos virtual en Windows (ej. 1000). Si se deja en blanco, se usarán los valores por defecto del sistema.',
-        'en': 'Allows emulating a specific Unix User ID (UID) and Group ID (GID) within the virtual file system in Windows (e.g., 1000). If left blank, default system values are used.'
+        'en': 'Allows emulating a specific Unix User ID (UID) and Group ID (GID) within the virtual file system in Windows (e.g., 1000). If left blank, default system values are used.',
+        'fr': 'Permet d\'émuler un User ID (UID) et un Group ID (GID) Unix spécifique pour le système de fichiers virtuel sous Windows (ex. 1000). Si laissé vide, les valeurs par défaut du système seront utilisées.',
+        'pt': 'Permite emular um User ID (UID) e Group ID (GID) Unix específico no sistema de arquivos virtual do Windows (ex. 1000). Se deixado em branco, serão usados os valores padrão do sistema.',
+        'de': 'Ermöglicht die Emulation einer bestimmten Unix-Benutzer-ID (UID) und Gruppen-ID (GID) im virtuellen Dateisystem unter Windows (z. B. 1000). Wenn leer gelassen, werden die Systemstandardwerte verwendet.',
+        'it': 'Consente di emulare uno specifico User ID (UID) e Group ID (GID) Unix all\'interno del file system virtuale in Windows (es. 1000). Se lasciato vuoto, verranno utilizzati i valori predefiniti del sistema.',
+        'hi': 'Windows में वर्चुअल फ़ाइल सिस्टम के भीतर एक विशिष्ट यूनिक्स यूजर आईडी (UID) और ग्रुप आईडी (GID) का अनुकरण करने की अनुमति देता है (उदा. 1000)। यदि खाली छोड़ दिया जाता है, तो डिफ़ॉल्ट सिस्टम मान उपयोग किए जाते हैं।',
+        'zh': '允许在 Windows 虚拟文件系统中模拟特定的 Unix 用户 ID (UID) 和组 ID (GID)（例如 1000）。如果留空，则使用系统默认值。',
+        'ru': 'Позволяет эмулировать определенные Unix User ID (UID) и Group ID (GID) в виртуальной файловой системе в Windows (напр. 1000). Если оставить пустым, используются значения системы по умолчанию.',
+        'ro': 'Permite emularea unui User ID (UID) și Group ID (GID) Unix specific în sistemul de fișiere virtual din Windows (ex. 1000). Dacă este lăsat gol, se vor folosi valorile implicite ale sistemului.'
     },
     'already_created_note': {
         'es': 'Nota: Estos cambios no modifican los archivos ya existentes en el servidor SFTP, solo controlan cómo los muestra Windows y los permisos por defecto al crear nuevos ficheros/carpetas.',
-        'en': 'Note: These settings do not modify existing files on the SFTP server. They only control how Windows presents them and the default permissions when creating new files/directories.'
+        'en': 'Note: These settings do not modify existing files on the SFTP server. They only control how Windows presents them and the default permissions when creating new files/directories.',
+        'fr': 'Remarque : Ces paramètres ne modifient pas les fichiers existants sur le serveur SFTP. Ils contrôlent uniquement la manière dont Windows les affiche et les autorisations par défaut lors de la création de nouveaux fichiers/dossiers.',
+        'pt': 'Nota: Essas configurações não modificam os arquivos existentes no servidor SFTP. Elas apenas controlam como o Windows os apresenta e as permissões padrão ao criar novos arquivos/pastas.',
+        'de': 'Hinweis: Diese Einstellungen ändern keine vorhandenen Dateien auf dem SFTP-Server. Sie steuern nur, wie Windows sie darstellt, sowie die Standardberechtigungen beim Erstellen neuer Dateien/Ordner.',
+        'it': 'Nota: Queste impostazioni non modificano i file esistenti sul server SFTP. Controllano solo il modo in cui Windows li visualizza e i permessi predefiniti durante la creazione di nuovi file/cartelle.',
+        'hi': 'नोट: ये सेटिंग्स SFTP सर्वर पर मौजूदा फ़ाइलों को संशोधित नहीं करती हैं। वे केवल यह नियंत्रित करती हैं कि Windows उन्हें कैसे प्रस्तुत करता है और नई फ़ाइलें/निर्देशिकाएँ बनाते समय डिफ़ॉल्ट अनुमतियाँ क्या होंगी।',
+        'zh': '注意：这些设置不会修改 SFTP 服务器上的现有文件。它们仅控制 Windows 如何展示这些文件以及创建新文件/目录时的默认权限。',
+        'ru': 'Примечание: Эти настройки не изменяют существующие файлы на SFTP-сервере. Они лишь определяют отображение в Windows и разрешения по умолчанию при создании новых файлов/папок.',
+        'ro': 'Notă: Aceste setări nu modifică fișierele existente pe serverul SFTP. Ele controlează doar modul în care Windows le afișează și permisiunile implicite la crearea de fișiere/directoare noi.'
     },
     'tooltip_profile_name': {
         'es': 'Nombre único para identificar este perfil de conexión.',
-        'en': 'Unique name to identify this connection profile.'
+        'en': 'Unique name to identify this connection profile.',
+        'fr': 'Nom unique pour identifier ce profil de connexion.',
+        'pt': 'Nome exclusivo para identificar este perfil de conexão.',
+        'de': 'Eindeutiger Name zur Identifizierung dieses Verbindungsprofils.',
+        'it': 'Nome univoco per identificare questo profilo di connessione.',
+        'hi': 'इस कनेक्शन प्रोफ़ाइल की पहचान करने के लिए अद्वितीय नाम।',
+        'zh': '用于标识此连接配置文件的唯一名称。',
+        'ru': 'Уникальное имя для идентификации этого профиля подключения.',
+        'ro': 'Nume unic pentru identificarea acestui profil de conexiune.'
     },
     'tooltip_host': {
         'es': 'Dirección IP o dominio del servidor SFTP remoto.',
-        'en': 'IP address or hostname of the remote SFTP server.'
+        'en': 'IP address or hostname of the remote SFTP server.',
+        'fr': 'Adresse IP ou nom d\'hôte du serveur SFTP distant.',
+        'pt': 'Endereço IP ou nome de host do servidor SFTP remoto.',
+        'de': 'IP-Adresse oder Hostname des entfernten SFTP-Servers.',
+        'it': 'Indirizzo IP o nome host del server SFTP remoto.',
+        'hi': 'रिमोट SFTP सर्वर का IP पता या होस्टनाम।',
+        'zh': '远程 SFTP 服务器的 IP 地址或主机名。',
+        'ru': 'IP-адрес или имя хоста удаленного SFTP-сервера.',
+        'ro': 'Adresa IP sau numele de gazdă al serverului SFTP la distanță.'
     },
     'tooltip_port': {
         'es': 'Puerto SSH del servidor remoto (por defecto es 22).',
-        'en': 'SSH port of the remote server (default is 22).'
+        'en': 'SSH port of the remote server (default is 22).',
+        'fr': 'Port SSH du serveur distant (par défaut 22).',
+        'pt': 'Porta SSH do servidor remoto (o padrão é 22).',
+        'de': 'SSH-Port des entfernten Servers (Standard ist 22).',
+        'it': 'Porta SSH del server remoto (predefinita è 22).',
+        'hi': 'रिमोट सर्वर का SSH पोर्ट (डिफ़ॉल्ट 22 है)।',
+        'zh': '远程服务器的 SSH 端口（默认为 22）。',
+        'ru': 'SSH-порт удаленного сервера (по умолчанию 22).',
+        'ro': 'Portul SSH al serverului la distanță (implicit este 22).'
     },
     'tooltip_user': {
         'es': 'Nombre de usuario para autenticarse en el servidor remoto.',
-        'en': 'Username to authenticate on the remote server.'
+        'en': 'Username to authenticate on the remote server.',
+        'fr': 'Nom d\'utilisateur pour s\'authentifier sur le serveur distant.',
+        'pt': 'Nome de usuário para autenticação no servidor remoto.',
+        'de': 'Benutzername zur Authentifizierung am entfernten Server.',
+        'it': 'Nome utente per l\'autenticazione sul server remoto.',
+        'hi': 'रिमोट सर्वर पर प्रमाणित करने के लिए उपयोगकर्ता नाम।',
+        'zh': '在远程服务器上进行身份验证的用户名。',
+        'ru': 'Имя пользователя для аутентификации на удаленном сервере.',
+        'ro': 'Nume de utilizator pentru autentificare pe serverul la distanță.'
     },
     'tooltip_auth_type': {
         'es': 'Método de autenticación: contraseña tradicional o clave privada SSH.',
-        'en': 'Authentication method: traditional password or SSH private key.'
+        'en': 'Authentication method: traditional password or SSH private key.',
+        'fr': 'Méthode d\'authentification : mot de passe classique ou clé privée SSH.',
+        'pt': 'Método de autenticação: senha tradicional ou chave privada SSH.',
+        'de': 'Authentifizierungsmethode: herkömmliches Passwort oder privater SSH-Schlüssel.',
+        'it': 'Metodo di autenticazione: password tradizionale o chiave privada SSH.',
+        'hi': 'प्रमाणीकरण विधि: पारंपरिक पासवर्ड या SSH निजी कुंजी।',
+        'zh': '身份验证方法：传统密码或 SSH 私钥。',
+        'ru': 'Метод аутентификации: традиционный пароль или приватный ключ SSH.',
+        'ro': 'Metodă de autentificare: parolă tradițională sau cheie privată SSH.'
     },
     'tooltip_password': {
         'es': 'Contraseña del usuario o frase de paso de la clave privada SSH.',
-        'en': 'User password or SSH private key passphrase.'
+        'en': 'User password or SSH private key passphrase.',
+        'fr': 'Mot de passe utilisateur ou phrase secrète de la clé privée SSH.',
+        'pt': 'Senha do usuário ou frase secreta da chave privada SSH.',
+        'de': 'Benutzerpasswort oder Passphrase des privaten SSH-Schlüssels.',
+        'it': 'Password dell\'utente o passphrase della chiave privata SSH.',
+        'hi': 'उपयोगकर्ता पासवर्ड या SSH निजी कुंजी पासफ़्रेज़।',
+        'zh': '用户密码或 SSH 私钥密码短语。',
+        'ru': 'Пароль пользователя или парольная фраза приватного ключа SSH.',
+        'ro': 'Parola utilizatorului sau fraza de acces a cheii private SSH.'
     },
     'tooltip_key_path': {
         'es': 'Ruta local al archivo de clave privada SSH (ej. id_rsa, id_ed25519).',
-        'en': 'Local path to the SSH private key file (e.g. id_rsa, id_ed25519).'
+        'en': 'Local path to the SSH private key file (e.g. id_rsa, id_ed25519).',
+        'fr': 'Chemin local vers le fichier de clé privée SSH (ex. id_rsa, id_ed25519).',
+        'pt': 'Caminho local para o arquivo de chave privada SSH (ex. id_rsa, id_ed25519).',
+        'de': 'Lokaler Pfad zur Datei des privaten SSH-Schlüssels (z. B. id_rsa, id_ed25519).',
+        'it': 'Percorso locale del file della chiave privata SSH (es. id_rsa, id_ed25519).',
+        'hi': 'SSH निजी कुंजी फ़ाइल का स्थानीय पथ (उदा. id_rsa, id_ed25519)।',
+        'zh': 'SSH 私钥文件的本地路径（例如 id_rsa, id_ed25519）。',
+        'ru': 'Локальный путь к файлу приватного ключа SSH (напр. id_rsa, id_ed25519).',
+        'ro': 'Calea locală către fișierul de cheie privată SSH (ex. id_rsa, id_ed25519).'
     },
     'tooltip_remote_path': {
         'es': 'Carpeta remota que se desea montar (por defecto es la raíz /).',
-        'en': 'Remote folder path to mount (default is root /).'
+        'en': 'Remote folder path to mount (default is root /).',
+        'fr': 'Dossier distant à monter (par défaut la racine /).',
+        'pt': 'Pasta remota a ser montada (o padrão é a raiz /).',
+        'de': 'Entfernter Ordnerpfad zum Mounten (Standard ist Root /).',
+        'it': 'Percorso della cartella remota da montare (predefinito è la radice /).',
+        'hi': 'माउंट करने के लिए रिमोट फ़ोल्डर पथ (डिफ़ॉल्ट रूट / है)।',
+        'zh': '要挂载的远程文件夹路径（默认为根目录 /）。',
+        'ru': 'Путь к удаленной папке для монтирования (по умолчанию корень /).',
+        'ro': 'Calea folderului la distanță de montat (implicit este rădăcina /).'
     },
     'tooltip_drive_letter': {
         'es': 'Letra de unidad de Windows (ej. Z:) asignada a este montaje.',
-        'en': 'Windows drive letter (e.g. Z:) assigned to this mount.'
+        'en': 'Windows drive letter (e.g. Z:) assigned to this mount.',
+        'fr': 'Lettre de lecteur Windows (ex. Z:) assignée à ce montage.',
+        'pt': 'Letra da unidade do Windows (ex. Z:) atribuída a este ponto de montagem.',
+        'de': 'Windows-Laufwerksbuchstabe (z. B. Z:), der diesem Mount zugewiesen ist.',
+        'it': 'Lettera di unità Windows (es. Z:) assegnata a questo montaggio.',
+        'hi': 'इस माउंट को सौंपी गई Windows ड्राइव अक्षर (उदा. Z:)।',
+        'zh': '分配给此挂载的 Windows 驱动器盘符（例如 Z:）。',
+        'ru': 'Буква диска Windows (напр. Z:), назначенная этому подключению.',
+        'ro': 'Litera de unitate Windows (ex. Z:) atribuită acestei montări.'
     },
     'tooltip_auto_mount': {
         'es': 'Conectar automáticamente esta unidad al arrancar el programa.',
-        'en': 'Automatically connect this drive when the program starts.'
+        'en': 'Automatically connect this drive when the program starts.',
+        'fr': 'Connecter automatiquement ce lecteur au démarrage du programme.',
+        'pt': 'Conectar automaticamente esta unidade quando o programa iniciar.',
+        'de': 'Dieses Laufwerk beim Programmstart automatisch verbinden.',
+        'it': 'Connetti automaticamente questa unità all\'avvio del programma.',
+        'hi': 'प्रोग्राम प्रारंभ होने पर इस ड्राइव को स्वचालित रूप से कनेक्ट करें।',
+        'zh': '程序启动时自动连接此驱动器。',
+        'ru': 'Автоматически подключать этот диск при запуске программы.',
+        'ro': 'Conectați automat această unitate la pornirea programului.'
     },
     'tooltip_filemode': {
         'es': 'Permisos para los nuevos archivos creados en formato octal (ej. 0640).',
-        'en': 'Permissions for new files in octal format (e.g. 0640).'
+        'en': 'Permissions for new files in octal format (e.g. 0640).',
+        'fr': 'Permissions pour les nouveaux fichiers créés au format octal (ex. 0640).',
+        'pt': 'Permissões para novos arquivos criados em formato octal (ex. 0640).',
+        'de': 'Berechtigungen für neu erstellte Dateien im Oktalformat (z. B. 0640).',
+        'it': 'Permessi per i nuovi file creati in formato ottale (es. 0640).',
+        'hi': 'ऑक्टल प्रारूप में नई फ़ाइलों के लिए अनुमतियाँ (उदा. 0640)।',
+        'zh': '八进制格式的新建文件权限（例如 0640）。',
+        'ru': 'Разрешения для новых файлов в восьмеричном формате (напр. 0640).',
+        'ro': 'Permisiuni pentru fișierele nou create în format octal (ex. 0640).'
     },
     'tooltip_dirmode': {
         'es': 'Permisos para las nuevas carpetas creadas en formato octal (ej. 0750).',
-        'en': 'Permissions for new directories in octal format (e.g. 0750).'
+        'en': 'Permissions for new directories in octal format (e.g. 0750).',
+        'fr': 'Permissions pour les nouveaux dossiers créés au format octal (ex. 0750).',
+        'pt': 'Permissões para novas pastas criadas em formato octal (ex. 0750).',
+        'de': 'Berechtigungen für neu erstellte Ordner im Oktalformat (z. B. 0750).',
+        'it': 'Permessi per le nuove cartelle create in formato ottale (es. 0750).',
+        'hi': 'ऑक्टल प्रारूप में नई निर्देशिकाओं के लिए अनुमतियाँ (उदा. 0750)।',
+        'zh': '八进制格式的新建目录权限（例如 0750）。',
+        'ru': 'Разрешения для новых каталогов в восьмеричном формате (напр. 0750).',
+        'ro': 'Permisiuni pentru directoarele nou create în format octal (ex. 0750).'
     },
     'tooltip_uid': {
         'es': 'Unix User ID (UID) simulado para los archivos (opcional).',
-        'en': 'Simulated Unix User ID (UID) for files (optional).'
+        'en': 'Simulated Unix User ID (UID) for files (optional).',
+        'fr': 'Unix User ID (UID) simulé pour les fichiers (optionnel).',
+        'pt': 'Unix User ID (UID) simulado para os arquivos (opcional).',
+        'de': 'Simulierte Unix-Benutzer-ID (UID) für Dateien (optional).',
+        'it': 'Unix User ID (UID) simulato per i file (opzionale).',
+        'hi': 'फ़ाइलों के लिए सिम्युलेटेड यूनिक्स यूजर आईडी (UID) (वैकल्पिक)।',
+        'zh': '文件的模拟 Unix 用户 ID (UID)（可选）。',
+        'ru': 'Эмулированный Unix User ID (UID) для файлов (необязательно).',
+        'ro': 'Unix User ID (UID) simulat pentru fișiere (opțional).'
     },
     'tooltip_gid': {
         'es': 'Unix Group ID (GID) simulado para los archivos (opcional).',
-        'en': 'Simulated Unix Group ID (GID) for files (optional).'
+        'en': 'Simulated Unix Group ID (GID) for files (optional).',
+        'fr': 'Unix Group ID (GID) simulé pour les fichiers (optionnel).',
+        'pt': 'Unix Group ID (GID) simulado para os arquivos (opcional).',
+        'de': 'Simulierte Unix-Gruppen-ID (GID) für Dateien (optional).',
+        'it': 'Unix Group ID (GID) simulato per i file (opzionale).',
+        'hi': 'फ़ाइलों के लिए सिम्युलेटेड यूनिक्स ग्रुप आईडी (GID) (वैकल्पिक)।',
+        'zh': '文件的模拟 Unix 组 ID (GID)（可选）。',
+        'ru': 'Эмулированный Unix Group ID (GID) для файлов (необязательно).',
+        'ro': 'Unix Group ID (GID) simulat pentru fișiere (opțional).'
     },
     'menu_exit': {
         'es': 'Salir', 'en': 'Exit', 'fr': 'Quitter',
@@ -1063,7 +1213,15 @@ TRANSLATIONS = {
     },
     'confirm_exit_msg': {
         'es': '¿Estás seguro de que deseas desmontar todas las unidades activas y salir de la aplicación?',
-        'en': 'Are you sure you want to unmount all active drives and exit the application?'
+        'en': 'Are you sure you want to unmount all active drives and exit the application?',
+        'fr': 'Êtes-vous sûr de vouloir démonter tous les lecteurs actifs et quitter l\'application ?',
+        'pt': 'Tem certeza de que deseja desmontar todas as unidades ativas e sair do aplicativo?',
+        'de': 'Möchten Sie wirklich alle aktiven Laufwerke aushängen und die Anwendung beenden?',
+        'it': 'Sei sicuro di voler smontare tutte le unità attive e uscire dall\'applicazione?',
+        'hi': 'क्या आप वाकई सभी सक्रिय ड्राइव को अनमाउंट करना और एप्लिकेशन से बाहर निकलना चाहते हैं?',
+        'zh': '您确定要卸载所有活动驱动器并退出应用程序吗？',
+        'ru': 'Вы уверены, что хотите размонтировать все активные диски и выйти из приложения?',
+        'ro': 'Sigur doriți să demontați toate unitățile active și să ieșiți din aplicație?'
     },
     'exiting_title': {
         'es': 'Saliendo', 'en': 'Exiting', 'fr': 'Fermeture',
@@ -1073,15 +1231,39 @@ TRANSLATIONS = {
     },
     'exiting_msg': {
         'es': 'Desmontando todas las unidades SFTP activas y cerrando la aplicación...',
-        'en': 'Unmounting all active SFTP drives and closing the application...'
+        'en': 'Unmounting all active SFTP drives and closing the application...',
+        'fr': 'Démontage de tous les lecteurs SFTP actifs et fermeture de l\'application...',
+        'pt': 'Desmontando todas as unidades SFTP ativas e fechando o aplicativo...',
+        'de': 'Alle aktiven SFTP-Laufwerke werden ausgehängt und die Anwendung wird geschlossen...',
+        'it': 'Smontaggio di tutte le unità SFTP attive e chiusura dell\'applicazione...',
+        'hi': 'सभी सक्रिय SFTP ड्राइव को अनमाउंट किया जा रहा है और एप्लिकेशन को बंद किया जा रहा है...',
+        'zh': '正在卸载所有活动 SFTP 驱动器并关闭应用程序...',
+        'ru': 'Размонтирование всех активных дисков SFTP и закрытие приложения...',
+        'ro': 'Se demontează toate unitățile SFTP active și se închide aplicația...'
     },
     'hide_dotfiles': {
         'es': 'Ocultar archivos punto (que son los archivos ocultos en Linux)',
-        'en': 'Hide dotfiles (which are hidden files in Linux)'
+        'en': 'Hide dotfiles (which are hidden files in Linux)',
+        'fr': 'Masquer les fichiers commençant par un point (fichiers cachés sous Linux)',
+        'pt': 'Ocultar arquivos de ponto (arquivos ocultos no Linux)',
+        'de': 'Punkt-Dateien ausblenden (versteckte Dateien unter Linux)',
+        'it': 'Nascondi dotfile (file nascosti in Linux)',
+        'hi': 'डॉटफ़ाइलें छिपाएँ (जो Linux में छिपी हुई फ़ाइलें हैं)',
+        'zh': '隐藏点文件（即 Linux 中的隐藏文件）',
+        'ru': 'Скрывать dot-файлы (скрытые файлы в Linux)',
+        'ro': 'Ascunde fișierele punct (fișiere ascunse în Linux)'
     },
     'tooltip_hide_dotfiles': {
         'es': 'Excluye del montaje los archivos y carpetas que empiezan por punto (ej. .git, .htaccess).',
-        'en': 'Excludes files and folders starting with a dot (e.g. .git, .htaccess) from the mount.'
+        'en': 'Excludes files and folders starting with a dot (e.g. .git, .htaccess) from the mount.',
+        'fr': 'Exclut du montage les fichiers et dossiers commençant par un point (ex. .git, .htaccess).',
+        'pt': 'Exclui da montagem arquivos e pastas que começam com ponto (ex. .git, .htaccess).',
+        'de': 'Schließt Dateien und Ordner, die mit einem Punkt beginnen (z. B. .git, .htaccess), vom Mount aus.',
+        'it': 'Esclude dal montaggio file e cartelle che iniziano con un punto (es. .git, .htaccess).',
+        'hi': 'माउंट से डॉट से शुरू होने वाली फ़ाइलों और फ़ोल्डरों (उदा. .git, .htaccess) को बाहर करता है।',
+        'zh': '从挂载中排除以点开头的文件和文件夹（例如 .git, .htaccess）。',
+        'ru': 'Исключает из монтирования файлы и папки, начинающиеся с точки (напр. .git, .htaccess).',
+        'ro': 'Exclude de la montare fișierele și folderele care încep cu punct (ex. .git, .htaccess).'
     }
 }
 

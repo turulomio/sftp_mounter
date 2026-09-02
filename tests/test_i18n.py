@@ -29,11 +29,12 @@ class TestI18N(unittest.TestCase):
         # Non-existent key should return key itself
         self.assertEqual(self.i18n.t('non_existent_key_123'), 'non_existent_key_123')
 
-    def test_translation_formatting(self):
-        self.i18n.set_language('en')
-        # Assuming a key with formatting exists or testing generic string formatting fallback
-        res = self.i18n.t('title', dummy='test')
-        self.assertEqual(res, 'SFTP Mounter')
+    def test_all_keys_translated(self):
+        """Validates that all translation keys have non-empty translations for all supported languages."""
+        for key, trans in TRANSLATIONS.items():
+            for lang in SUPPORTED_LANGUAGES.keys():
+                self.assertIn(lang, trans, f"Missing translation for key '{key}' in language '{lang}'")
+                self.assertTrue(trans[lang].strip(), f"Empty translation for key '{key}' in language '{lang}'")
 
 if __name__ == '__main__':
     unittest.main()
