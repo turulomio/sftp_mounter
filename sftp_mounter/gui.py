@@ -1027,6 +1027,12 @@ class ProfileManagerDialog(QDialog):
         self.txt_uid.clear()
         self.txt_gid.clear()
         self.btn_delete_profile.setEnabled(False)
+        self.btn_save.setEnabled(True)
+        for i in range(self.cmb_drive_letter.count()):
+            letter = self.cmb_drive_letter.itemText(i)
+            if letter not in self.active_mounts:
+                self.cmb_drive_letter.setCurrentIndex(i)
+                break
 
     def on_profile_selected(self, current, previous):
         if not current:
@@ -1037,6 +1043,8 @@ class ProfileManagerDialog(QDialog):
         self.current_editing_profile = profile_name
         profile = self.config_manager.get_profile(profile_name)
         if not profile:
+            self.btn_save.setEnabled(True)
+            self.btn_delete_profile.setEnabled(False)
             return
 
         self.txt_profile_name.setText(profile_name)
@@ -1130,6 +1138,8 @@ class ProfileManagerDialog(QDialog):
         item = QListWidgetItem(name)
         self.lst_profiles.addItem(item)
         self.lst_profiles.setCurrentItem(item)
+        self.btn_save.setEnabled(True)
+        self.btn_delete_profile.setEnabled(False)
 
     def on_delete_profile_clicked(self):
         if not self.current_editing_profile:
@@ -1162,10 +1172,14 @@ class ProfileManagerDialog(QDialog):
             QMessageBox.warning(self, self.i18n.t('error_save_title'), self.i18n.t('error_save_required'))
             return
 
+        # If editing an existing profile that is currently mounted, prevent saving
+        if self.current_editing_profile:
+            existing_profile = self.config_manager.get_profile(self.current_editing_profile)
+            if existing_profile and existing_profile.get('drive_letter', '') in self.active_mounts:
+                QMessageBox.warning(self, self.i18n.t('error_save_title'), self.i18n.t('profile_active_warning'))
+                return
+
         drive = self.cmb_drive_letter.currentText()
-        if drive in self.active_mounts:
-            QMessageBox.warning(self, self.i18n.t('error_save_title'), self.i18n.t('profile_active_warning'))
-            return
 
         idx = self.cmb_auth_type.currentIndex()
         auth_type = 'password'
